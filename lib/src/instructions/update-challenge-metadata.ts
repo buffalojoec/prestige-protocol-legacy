@@ -16,97 +16,90 @@ import {
     PrestigeProtocolInstruction 
 } from './instruction';
 import { 
-    getEventPubkey 
+    getChallengePubkey 
 } from "../util/seed-util";
-import { 
-    PRESTIGE_PROGRAM_ID, 
-} from "../util";
+import { PRESTIGE_PROGRAM_ID } from "../util";
 import { User } from "../state";
 
-export class CreateEvent {
+export class UpdateChallengeMetadata {
 
     instruction: PrestigeProtocolInstruction;
     title: string;
     description: string;
-    location: string;
-    host_name: string;
-    date: string;
+    author: string;
+    tags: string;
 
     constructor(props: {
         instruction: PrestigeProtocolInstruction,
         title: string,
         description: string,
-        location: string,
-        host_name: string,
-        date: string,
+        author: string,
+        tags: string,
     }) {
         this.instruction = props.instruction;
         this.title = props.title;
         this.description = props.description;
-        this.location = props.location;
-        this.host_name = props.host_name;
-        this.date = props.date;
+        this.author = props.author;
+        this.tags = props.tags;
     }
 
     toBuffer() { 
-        return Buffer.from(borsh.serialize(CreateEventSchema, this)) 
+        return Buffer.from(borsh.serialize(UpdateChallengeMetadataSchema, this)) 
     }
     
     static fromBuffer(buffer: Buffer) {
-        return borsh.deserialize(CreateEventSchema, CreateEvent, buffer);
+        return borsh.deserialize(UpdateChallengeMetadataSchema, UpdateChallengeMetadata, buffer);
     }
 }
 
-export const CreateEventSchema = new Map([
-    [ CreateEvent, { 
+export const UpdateChallengeMetadataSchema = new Map([
+    [ UpdateChallengeMetadata, { 
         kind: 'struct', 
         fields: [ 
+            ['instruction', 'u8'],
             ['title', 'string'],
             ['description', 'string'],
-            ['location', 'string'],
-            ['host_name', 'string'],
-            ['date', 'string'],
+            ['author', 'string'],
+            ['tags', 'string'],
         ],
     }]
 ]);
 
-export async function createCreateEventInstruction(
+export async function createUpdateChallengeMetadataInstruction(
     connection: Connection,
     payer: PublicKey,
     authority: PublicKey,
     title: string,
     description: string,
-    location: string,
-    host_name: string,
-    date: string,
+    author: string,
+    tags: string,
 ): Promise<[TransactionInstruction, PublicKey, number]> {
 
-    let eventId = 0;
+    let challengeId = 0;
     const userData = await connection.getAccountInfo(authority);
     if (userData?.lamports != 0 && userData?.data) {
-        eventId = User.fromBuffer(userData.data).events_hosted + 1;
+        challengeId = User.fromBuffer(userData.data).challenges_authored + 1;
     }
-    if (eventId === 0) throw(
+    if (challengeId === 0) throw(
         '[Err]: The provided authority has no associated User account.'
     );
 
-    const eventPubkey = (await getEventPubkey(
+    const challengePubkey = (await getChallengePubkey(
         payer,
-        eventId,
+        challengeId,
     ))[0];
 
-    const instructionObject = new CreateEvent({
-        instruction: PrestigeProtocolInstruction.CreateEvent,
+    const instructionObject = new UpdateChallengeMetadata({
+        instruction: PrestigeProtocolInstruction.UpdateChallengeMetadata,
         title,
         description,
-        location,
-        host_name,
-        date,
+        author,
+        tags,
     });
 
     const ix = new TransactionInstruction({
         keys: [
-            {pubkey: eventPubkey, isSigner: false, isWritable: true},
+            {pubkey: challengePubkey, isSigner: false, isWritable: true},
             {pubkey: authority, isSigner: true, isWritable: true},
             {pubkey: payer, isSigner: true, isWritable: true},
             {pubkey: SystemProgram.programId, isSigner: false, isWritable: false}
@@ -115,30 +108,28 @@ export async function createCreateEventInstruction(
         data: instructionObject.toBuffer(),
     });
 
-    return [ix, eventPubkey, eventId];
+    return [ix, challengePubkey, challengeId];
 }
 
-export async function createEvent(
+export async function updateChallengeMetadata(
     connection: Connection,
     payer: Keypair,
     authority: PublicKey,
     title: string,
     description: string,
-    location: string,
-    host_name: string,
-    date: string,
+    author: string,
+    tags: string,
     confirmOptions?: ConfirmOptions
 ): Promise<[PublicKey, number]> {
 
-    const [ix, eventPubkey, eventId] = await createCreateEventInstruction(
+    const [ix, challengePubkey, challengeId] = await createUpdateChallengeMetadataInstruction(
         connection,
         payer.publicKey,
         authority,
         title,
         description,
-        location,
-        host_name,
-        date,
+        author,
+        tags,
     );
     await sendAndConfirmTransaction(
         connection,
@@ -146,5 +137,5 @@ export async function createEvent(
         [payer],
         confirmOptions,
     );
-    return [eventPubkey, eventId];
+    return [challengePubkey, challengeId];
 }

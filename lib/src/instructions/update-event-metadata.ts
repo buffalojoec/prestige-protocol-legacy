@@ -23,7 +23,7 @@ import {
 } from "../util";
 import { User } from "../state";
 
-export class CreateEvent {
+export class UpdateEventMetadata {
 
     instruction: PrestigeProtocolInstruction;
     title: string;
@@ -49,16 +49,16 @@ export class CreateEvent {
     }
 
     toBuffer() { 
-        return Buffer.from(borsh.serialize(CreateEventSchema, this)) 
+        return Buffer.from(borsh.serialize(UpdateEventMetadataSchema, this)) 
     }
     
     static fromBuffer(buffer: Buffer) {
-        return borsh.deserialize(CreateEventSchema, CreateEvent, buffer);
+        return borsh.deserialize(UpdateEventMetadataSchema, UpdateEventMetadata, buffer);
     }
 }
 
-export const CreateEventSchema = new Map([
-    [ CreateEvent, { 
+export const UpdateEventMetadataSchema = new Map([
+    [ UpdateEventMetadata, { 
         kind: 'struct', 
         fields: [ 
             ['title', 'string'],
@@ -70,7 +70,7 @@ export const CreateEventSchema = new Map([
     }]
 ]);
 
-export async function createCreateEventInstruction(
+export async function createUpdateEventMetadataInstruction(
     connection: Connection,
     payer: PublicKey,
     authority: PublicKey,
@@ -95,8 +95,8 @@ export async function createCreateEventInstruction(
         eventId,
     ))[0];
 
-    const instructionObject = new CreateEvent({
-        instruction: PrestigeProtocolInstruction.CreateEvent,
+    const instructionObject = new UpdateEventMetadata({
+        instruction: PrestigeProtocolInstruction.UpdateEventMetadata,
         title,
         description,
         location,
@@ -118,7 +118,7 @@ export async function createCreateEventInstruction(
     return [ix, eventPubkey, eventId];
 }
 
-export async function createEvent(
+export async function updateEventMetadata(
     connection: Connection,
     payer: Keypair,
     authority: PublicKey,
@@ -130,7 +130,7 @@ export async function createEvent(
     confirmOptions?: ConfirmOptions
 ): Promise<[PublicKey, number]> {
 
-    const [ix, eventPubkey, eventId] = await createCreateEventInstruction(
+    const [ix, eventPubkey, eventId] = await createUpdateEventMetadataInstruction(
         connection,
         payer.publicKey,
         authority,

@@ -16,36 +16,31 @@ import {
     PrestigeProtocolInstruction 
 } from './instruction';
 import { 
-    getChallengeCounterPubkey,
-    getChallengeMetadataPubkey, 
     getChallengePubkey 
 } from "../util/seed-util";
-import { 
-    ChallengeCounter,
-} from "../state";
 import { PRESTIGE_PROGRAM_ID } from "../util";
-
+import { User } from "../state";
 
 export class CreateChallenge {
 
     instruction: PrestigeProtocolInstruction;
-    challenge_title: string;
-    challenge_description: string;
-    challenge_author: string;
-    challenge_tags: string;
+    title: string;
+    description: string;
+    author: string;
+    tags: string;
 
     constructor(props: {
         instruction: PrestigeProtocolInstruction,
-        challenge_title: string,
-        challenge_description: string,
-        challenge_author: string,
-        challenge_tags: string,
+        title: string,
+        description: string,
+        author: string,
+        tags: string,
     }) {
         this.instruction = props.instruction;
-        this.challenge_title = props.challenge_title;
-        this.challenge_description = props.challenge_description;
-        this.challenge_author = props.challenge_author;
-        this.challenge_tags = props.challenge_tags;
+        this.title = props.title;
+        this.description = props.description;
+        this.author = props.author;
+        this.tags = props.tags;
     }
 
     toBuffer() { 
@@ -62,10 +57,10 @@ export const CreateChallengeSchema = new Map([
         kind: 'struct', 
         fields: [ 
             ['instruction', 'u8'],
-            ['challenge_title', 'string'],
-            ['challenge_description', 'string'],
-            ['challenge_author', 'string'],
-            ['challenge_tags', 'string'],
+            ['title', 'string'],
+            ['description', 'string'],
+            ['author', 'string'],
+            ['tags', 'string'],
         ],
     }]
 ]);
@@ -73,41 +68,39 @@ export const CreateChallengeSchema = new Map([
 export async function createCreateChallengeInstruction(
     connection: Connection,
     payer: PublicKey,
-    challenge_title: string,
-    challenge_description: string,
-    challenge_author: string,
-    challenge_tags: string,
+    authority: PublicKey,
+    title: string,
+    description: string,
+    author: string,
+    tags: string,
 ): Promise<[TransactionInstruction, PublicKey, number]> {
 
-    let challengeId = 1;
-    const challengeCounterPubkey = (await getChallengeCounterPubkey())[0];
-    const challengeCounterData = await connection.getAccountInfo(challengeCounterPubkey);
-    if (challengeCounterData?.lamports != 0 && challengeCounterData?.data) {
-        challengeId = ChallengeCounter.fromBuffer(challengeCounterData.data).challenges_count + 1;
+    let challengeId = 0;
+    const userData = await connection.getAccountInfo(authority);
+    if (userData?.lamports != 0 && userData?.data) {
+        challengeId = User.fromBuffer(userData.data).challenges_authored + 1;
     }
+    if (challengeId === 0) throw(
+        '[Err]: The provided authority has no associated User account.'
+    );
 
     const challengePubkey = (await getChallengePubkey(
         payer,
         challengeId,
     ))[0];
 
-    const challengeMetadataPubkey = (await getChallengeMetadataPubkey(
-        challengePubkey,
-    ))[0];
-
     const instructionObject = new CreateChallenge({
         instruction: PrestigeProtocolInstruction.CreateChallenge,
-        challenge_title,
-        challenge_description,
-        challenge_author,
-        challenge_tags,
+        title,
+        description,
+        author,
+        tags,
     });
 
     const ix = new TransactionInstruction({
         keys: [
             {pubkey: challengePubkey, isSigner: false, isWritable: true},
-            {pubkey: challengeMetadataPubkey, isSigner: false, isWritable: true},
-            {pubkey: challengeCounterPubkey, isSigner: false, isWritable: true},
+            {pubkey: authority, isSigner: true, isWritable: true},
             {pubkey: payer, isSigner: true, isWritable: true},
             {pubkey: SystemProgram.programId, isSigner: false, isWritable: false}
         ],
@@ -118,24 +111,25 @@ export async function createCreateChallengeInstruction(
     return [ix, challengePubkey, challengeId];
 }
 
-
 export async function createChallenge(
     connection: Connection,
     payer: Keypair,
-    challenge_title: string,
-    challenge_description: string,
-    challenge_author: string,
-    challenge_tags: string,
+    authority: PublicKey,
+    title: string,
+    description: string,
+    author: string,
+    tags: string,
     confirmOptions?: ConfirmOptions
 ): Promise<[PublicKey, number]> {
 
     const [ix, challengePubkey, challengeId] = await createCreateChallengeInstruction(
         connection,
         payer.publicKey,
-        challenge_title,
-        challenge_description,
-        challenge_author,
-        challenge_tags,
+        authority,
+        title,
+        description,
+        author,
+        tags,
     );
     await sendAndConfirmTransaction(
         connection,

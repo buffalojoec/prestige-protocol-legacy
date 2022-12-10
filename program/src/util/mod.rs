@@ -1,7 +1,5 @@
-pub mod mint_custom_mint;
-pub mod size;
-pub mod transfer_escrow;
+pub mod accounts;
+pub mod addresses;
 
-pub use mint_custom_mint::*;
-pub use size::*;
-pub use transfer_escrow::*;
+pub use accounts::*;
+pub use addresses::*;

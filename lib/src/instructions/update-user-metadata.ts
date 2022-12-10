@@ -21,9 +21,8 @@ import {
 import { 
     PRESTIGE_PROGRAM_ID, 
 } from "../util";
-import { User } from "../state";
 
-export class CreateUser {
+export class UpdateUserMetadata {
 
     instruction: PrestigeProtocolInstruction;
     name: string;
@@ -37,16 +36,16 @@ export class CreateUser {
     }
 
     toBuffer() { 
-        return Buffer.from(borsh.serialize(CreateUserSchema, this)) 
+        return Buffer.from(borsh.serialize(UpdateUserMetadataSchema, this)) 
     }
     
     static fromBuffer(buffer: Buffer) {
-        return borsh.deserialize(CreateUserSchema, CreateUser, buffer);
+        return borsh.deserialize(UpdateUserMetadataSchema, UpdateUserMetadata, buffer);
     }
 }
 
-export const CreateUserSchema = new Map([
-    [ CreateUser, { 
+export const UpdateUserMetadataSchema = new Map([
+    [ UpdateUserMetadata, { 
         kind: 'struct', 
         fields: [ 
             ['name', 'string'],
@@ -54,7 +53,7 @@ export const CreateUserSchema = new Map([
     }]
 ]);
 
-export async function createCreateUserInstruction(
+export async function createUpdateUserMetadataInstruction(
     payer: PublicKey,
     authority: PublicKey,
     name: string,
@@ -64,8 +63,8 @@ export async function createCreateUserInstruction(
         authority,
     ))[0];
 
-    const instructionObject = new CreateUser({
-        instruction: PrestigeProtocolInstruction.CreateUser,
+    const instructionObject = new UpdateUserMetadata({
+        instruction: PrestigeProtocolInstruction.UpdateUserMetadata,
         name,
     });
 
@@ -83,7 +82,7 @@ export async function createCreateUserInstruction(
     return [ix, userPubkey];
 }
 
-export async function createUser(
+export async function updateUserMetadata(
     connection: Connection,
     payer: Keypair,
     authority: PublicKey,
@@ -91,7 +90,7 @@ export async function createUser(
     confirmOptions?: ConfirmOptions
 ): Promise<PublicKey> {
 
-    const [ix, userPubkey] = await createCreateUserInstruction(
+    const [ix, userPubkey] = await createUpdateUserMetadataInstruction(
         payer.publicKey,
         authority,
         name,

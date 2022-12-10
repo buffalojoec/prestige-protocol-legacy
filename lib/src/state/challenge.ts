@@ -9,20 +9,38 @@ import {
 
 export class Challenge {
 
-    challenge_id: number;
-    prizes_count: number;
-    author: PublicKey;
+    authority: PublicKey;
+    title: string;
+    description: string;
+    author_name: string;
+    tags: string;
+    endorsements: number;
+    contracts_completed: number;
+    contracts_created: number;
+    status: number;
     bump: number;
 
     constructor(props: {
-        challenge_id: number,
-        prizes_count: number,
-        author: PublicKey,
+        authority: PublicKey,
+        title: string,
+        description: string,
+        author_name: string,
+        tags: string,
+        endorsements: number,
+        contracts_completed: number,
+        contracts_created: number,
+        status: number,
         bump: number,
     }) {
-        this.challenge_id = props.challenge_id;
-        this.prizes_count = props.prizes_count;
-        this.author = props.author;
+        this.authority = props.authority;
+        this.title = props.title;
+        this.description = props.description;
+        this.author_name = props.author_name;
+        this.tags = props.tags;
+        this.endorsements = props.endorsements;
+        this.contracts_completed = props.contracts_completed;
+        this.contracts_created = props.contracts_created;
+        this.status = props.status;
         this.bump = props.bump;
     }
 
@@ -33,27 +51,17 @@ export class Challenge {
     static fromBuffer(buffer: Buffer) {
         const challenge = borsh.deserialize(ChallengeSchema, Challenge, buffer);
         return new Challenge({
-            challenge_id: challenge.challenge_id,
-            prizes_count: challenge.prizes_count,
-            author: new PublicKey(challenge.author),
+            authority: new PublicKey(challenge.authority),
+            title: challenge.title,
+            description: challenge.description,
+            author_name: challenge.author_name,
+            tags: challenge.tags,
+            endorsements: challenge.endorsements,
+            contracts_completed: challenge.contracts_completed,
+            contracts_created: challenge.contracts_created,
+            status: challenge.status,
             bump: challenge.bump,
         });
-    }
-
-    static getProgramAccountsFilter(authority: PublicKey) {
-        return {
-            filters: [
-                {
-                    dataSize: 35,
-                },
-                {
-                    memcmp: {
-                        offset: 2,
-                        bytes: authority.toBase58(),
-                    }
-                }
-            ]
-        };
     }
 }
 
@@ -61,103 +69,15 @@ export const ChallengeSchema = new Map([
     [ Challenge, { 
         kind: 'struct', 
         fields: [ 
-            ['challenge_id', 'u8'],
-            ['prizes_count', 'u8'],
-            ['author', [32]],
-            ['bump', 'u8'],
-        ],
-    }]
-]);
-
-
-export class ChallengeMetadata {
-
-    challenge_title: string;
-    challenge_description: string;
-    challenge_author: string;
-    challenge_tags: string;
-    bump: number;
-
-    constructor(props: {
-        challenge_title: string,
-        challenge_description: string,
-        challenge_author: string,
-        challenge_tags: string,
-        bump: number,
-    }) {
-        this.challenge_title = props.challenge_title;
-        this.challenge_description = props.challenge_description;
-        this.challenge_author = props.challenge_author;
-        this.challenge_tags = props.challenge_tags;
-        this.bump = props.bump;
-    }
-
-    toBuffer() { 
-        return Buffer.from(borsh.serialize(ChallengeMetadataSchema, this)) 
-    }
-    
-    static fromBuffer(buffer: Buffer) {
-        const challengeMetadata = borsh.deserialize(ChallengeMetadataSchema, ChallengeMetadata, buffer);
-        return new ChallengeMetadata({
-            challenge_title: challengeMetadata.challenge_title,
-            challenge_description: challengeMetadata.challenge_description,
-            challenge_author: challengeMetadata.challenge_author,
-            challenge_tags: challengeMetadata.challenge_tags,
-            bump: challengeMetadata.bump,
-        });
-    }
-}
-
-export const ChallengeMetadataSchema = new Map([
-    [ ChallengeMetadata, { 
-        kind: 'struct', 
-        fields: [ 
-            ['challenge_title', 'string'],
-            ['challenge_description', 'string'],
-            ['challenge_author', 'string'],
-            ['challenge_tags', 'string'],
-            ['bump', 'u8'],
-        ],
-    }]
-]);
-
-
-export class ChallengeCounter {
-
-    challenges_count: number;
-    authority: PublicKey;
-    bump: number;
-
-    constructor(props: {
-        challenges_count: number,
-        authority: PublicKey,
-        bump: number,
-    }) {
-        this.challenges_count = props.challenges_count;
-        this.authority = props.authority;
-        this.bump = props.bump;
-    }
-
-    toBuffer() { 
-        return Buffer.from(borsh.serialize(ChallengeCounterSchema, this)) 
-    }
-    
-    static fromBuffer(buffer: Buffer) {
-        const challengeCounter = borsh.deserialize(ChallengeCounterSchema, ChallengeCounter, buffer);
-        return new ChallengeCounter({
-            challenges_count: challengeCounter.challenges_count,
-            authority: challengeCounter.authority,
-            bump: challengeCounter.bump,
-        })
-    }
-}
-
-export const ChallengeCounterSchema = new Map([
-    [ ChallengeCounter, { 
-        kind: 'struct', 
-        fields: [ 
-            ['challenges_count', 'u8'],
             ['authority', [32]],
+            ['title', 'string'],
+            ['description', 'string'],
+            ['author_name', 'string'],
+            ['tags', 'string'],
+            ['endorsements', 'u32'],
+            ['contracts_completed', 'u32'],
+            ['contracts_created', 'u32'],
+            ['status', 'u8'],
             ['bump', 'u8'],
         ],
     }]

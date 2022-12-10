@@ -7,37 +7,33 @@ use solana_program::{
 };
 
 use crate::instructions::{ 
+    close_challenge::{ close_challenge },
+    close_contract::{ close_contract },
     create_challenge::{ CreateChallengeArgs, create_challenge },
-    create_custom_mint::{ CreateCustomMintArgs, create_custom_mint },
+    create_contract::{ CreateContractArgs, create_contract },
+    create_escrow::{ CreateEscrowArgs, create_escrow },
     create_event::{ CreateEventArgs, create_event },
-    create_pot::{ CreatePotArgs, create_pot },
-    create_prize::{ CreatePrizeArgs, create_prize },
     create_user::{ CreateUserArgs, create_user },
-    issue_payout::{ IssuePayoutArgs, issue_payout },
-    issue_reward::{ IssueRewardArgs, issue_reward },
-    update_challenge::{ UpdateChallengeArgs, update_challenge },
-    update_event::{ UpdateEventArgs, update_event },
-    update_pot::{ UpdatePotArgs, update_pot },
-    update_prize::{ UpdatePrizeArgs, update_prize },
+    fulfill_contract::{ fulfill_contract },
+    update_challenge_metadata::{ UpdateChallengeMetadataArgs, update_challenge_metadata },
+    update_event_metadata::{ UpdateEventMetadataArgs, update_event_metadata },
+    update_user_metadata::{ UpdateUserMetadataArgs, update_user_metadata },
 };
-
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub enum PrestigeProtocolInstruction {
+    CloseChallenge,
+    CloseContract,
     CreateChallenge(CreateChallengeArgs),
-    CreateCustomMint(CreateCustomMintArgs),
+    CreateContract(CreateContractArgs),
+    CreateEscrow(CreateEscrowArgs),
     CreateEvent(CreateEventArgs),
-    CreatePot(CreatePotArgs),
-    CreatePrize(CreatePrizeArgs),
     CreateUser(CreateUserArgs),
-    IssuePayout(IssuePayoutArgs),
-    IssueReward(IssueRewardArgs),
-    UpdateChallenge(UpdateChallengeArgs),
-    UpdateEvent(UpdateEventArgs),
-    UpdatePot(UpdatePotArgs),
-    UpdatePrize(UpdatePrizeArgs),
+    FulfillContract,
+    UpdateChallengeMetadata(UpdateChallengeMetadataArgs),
+    UpdateEventMetadata(UpdateEventMetadataArgs),
+    UpdateUserMetadata(UpdateUserMetadataArgs),
 }
-
 
 pub fn process_instruction(
     program_id: &Pubkey,
@@ -46,67 +42,50 @@ pub fn process_instruction(
 ) -> ProgramResult {
 
     let instruction = PrestigeProtocolInstruction::try_from_slice(&instruction_data)?;
-    
     match instruction {
-
+        PrestigeProtocolInstruction::CloseChallenge => {
+            msg!("Prestige Protocol Instruction: CloseChallenge");
+            return close_challenge(accounts);
+        }
+        PrestigeProtocolInstruction::CloseContract => {
+            msg!("Prestige Protocol Instruction: CloseContract");
+            return close_contract(accounts);
+        }
         PrestigeProtocolInstruction::CreateChallenge(args) => {
             msg!("Prestige Protocol Instruction: CreateChallenge");
             return create_challenge(program_id, accounts, args);
         }
-
-        PrestigeProtocolInstruction::CreateCustomMint(args) => {
-            msg!("Prestige Protocol Instruction: CreateCustomMint");
-            return create_custom_mint(accounts, args);
+        PrestigeProtocolInstruction::CreateContract(args) => {
+            msg!("Prestige Protocol Instruction: CreateContract");
+            return create_contract(program_id, accounts, args);
         }
-
+        PrestigeProtocolInstruction::CreateEscrow(args) => {
+            msg!("Prestige Protocol Instruction: CreateEscrow");
+            return create_escrow(program_id, accounts, args);
+        }
         PrestigeProtocolInstruction::CreateEvent(args) => {
             msg!("Prestige Protocol Instruction: CreateEvent");
             return create_event(program_id, accounts, args);
         }
-
-        PrestigeProtocolInstruction::CreatePot(args) => {
-            msg!("Prestige Protocol Instruction: CreatePot");
-            return create_pot(program_id, accounts, args);
-        }
-
-        PrestigeProtocolInstruction::CreatePrize(args) => {
-            msg!("Prestige Protocol Instruction: CreatePrize");
-            return create_prize(program_id, accounts, args);
-        }
-
         PrestigeProtocolInstruction::CreateUser(args) => {
             msg!("Prestige Protocol Instruction: CreateUser");
             return create_user(program_id, accounts, args);
         }
-        
-        PrestigeProtocolInstruction::IssuePayout(args) => {
-            msg!("Prestige Protocol Instruction: IssuePayout");
-            return issue_payout(program_id, accounts, args);
+        PrestigeProtocolInstruction::FulfillContract => {
+            msg!("Prestige Protocol Instruction: FulfillContract");
+            return fulfill_contract(accounts);
         }
-
-        PrestigeProtocolInstruction::IssueReward(args) => {
-            msg!("Prestige Protocol Instruction: IssueReward");
-            return issue_reward(program_id, accounts, args);
+        PrestigeProtocolInstruction::UpdateChallengeMetadata(args) => {
+            msg!("Prestige Protocol Instruction: UpdateChallengeMetadata");
+            return update_challenge_metadata(accounts, args);
         }
-
-        PrestigeProtocolInstruction::UpdateChallenge(args) => {
-            msg!("Prestige Protocol Instruction: UpdateChallenge");
-            return update_challenge(program_id, accounts, args);
+        PrestigeProtocolInstruction::UpdateEventMetadata(args) => {
+            msg!("Prestige Protocol Instruction: UpdateEventMetadata");
+            return update_event_metadata(accounts, args);
         }
-
-        PrestigeProtocolInstruction::UpdateEvent(args) => {
-            msg!("Prestige Protocol Instruction: UpdateEvent");
-            return update_event(program_id, accounts, args);
-        }
-
-        PrestigeProtocolInstruction::UpdatePot(args) => {
-            msg!("Prestige Protocol Instruction: UpdatePot");
-            return update_pot(program_id, accounts, args);
-        }
-
-        PrestigeProtocolInstruction::UpdatePrize(args) => {
-            msg!("Prestige Protocol Instruction: UpdatePrize");
-            return update_prize(program_id, accounts, args);
+        PrestigeProtocolInstruction::UpdateUserMetadata(args) => {
+            msg!("Prestige Protocol Instruction: UpdateUserMetadata");
+            return update_user_metadata(accounts, args);
         }
     }
 }

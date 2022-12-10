@@ -8,7 +8,6 @@ import {
     Keypair,
     PublicKey, 
     sendAndConfirmTransaction, 
-    SystemProgram,
     Transaction,
     TransactionInstruction 
 } from '@solana/web3.js';
@@ -16,85 +15,72 @@ import {
     PrestigeProtocolInstruction 
 } from './instruction';
 import { 
-    getUserPubkey 
-} from "../util/seed-util";
-import { 
     PRESTIGE_PROGRAM_ID, 
 } from "../util";
-import { User } from "../state";
 
-export class CreateUser {
+export class CloseChallenge {
 
     instruction: PrestigeProtocolInstruction;
-    name: string;
 
     constructor(props: {
         instruction: PrestigeProtocolInstruction,
-        name: string,
     }) {
         this.instruction = props.instruction;
-        this.name = props.name;
     }
 
     toBuffer() { 
-        return Buffer.from(borsh.serialize(CreateUserSchema, this)) 
+        return Buffer.from(borsh.serialize(CloseChallengeSchema, this)) 
     }
     
     static fromBuffer(buffer: Buffer) {
-        return borsh.deserialize(CreateUserSchema, CreateUser, buffer);
+        return borsh.deserialize(CloseChallengeSchema, CloseChallenge, buffer);
     }
 }
 
-export const CreateUserSchema = new Map([
-    [ CreateUser, { 
+export const CloseChallengeSchema = new Map([
+    [ CloseChallenge, { 
         kind: 'struct', 
         fields: [ 
-            ['name', 'string'],
+            ['instruction', 'u8'],
         ],
     }]
 ]);
 
-export async function createCreateUserInstruction(
+export async function createCloseChallengeInstruction(
     payer: PublicKey,
     authority: PublicKey,
-    name: string,
-): Promise<[TransactionInstruction, PublicKey]> {
+    challenge: PublicKey,
+): Promise<TransactionInstruction> {
 
-    const userPubkey = (await getUserPubkey(
-        authority,
-    ))[0];
-
-    const instructionObject = new CreateUser({
-        instruction: PrestigeProtocolInstruction.CreateUser,
-        name,
+    const instructionObject = new CloseChallenge({
+        instruction: PrestigeProtocolInstruction.CloseChallenge,
     });
 
     const ix = new TransactionInstruction({
         keys: [
-            {pubkey: userPubkey, isSigner: false, isWritable: true},
+            {pubkey: challenge, isSigner: false, isWritable: true},
             {pubkey: authority, isSigner: true, isWritable: true},
             {pubkey: payer, isSigner: true, isWritable: true},
-            {pubkey: SystemProgram.programId, isSigner: false, isWritable: false}
         ],
         programId: PRESTIGE_PROGRAM_ID,
         data: instructionObject.toBuffer(),
     });
 
-    return [ix, userPubkey];
+    return ix;
 }
 
-export async function createUser(
+export async function closeChallenge(
     connection: Connection,
     payer: Keypair,
     authority: PublicKey,
-    name: string,
+    challenge: PublicKey,
     confirmOptions?: ConfirmOptions
 ): Promise<PublicKey> {
 
-    const [ix, userPubkey] = await createCreateUserInstruction(
+    const ix = await createCloseChallengeInstruction(
         payer.publicKey,
         authority,
-        name,
+        challenge,
     );
     await sendAndConfirmTransaction(
         connection,
@@ -102,5 +88,5 @@ export async function createUser(
         [payer],
         confirmOptions,
     );
-    return userPubkey;
+    return challenge;
 }
