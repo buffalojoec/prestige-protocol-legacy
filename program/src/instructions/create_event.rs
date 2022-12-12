@@ -9,24 +9,19 @@ use solana_program::{
 
 use crate::state::{
     Event,
-    EventCounter,
     EventMetadata,
+    PrestigeDataAccount,
+    User,
 };
-use crate::util::{
-    lamports_required,
-    size,
-};
-
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct CreateEventArgs {
-    pub event_title: String,
-    pub event_description: String,
-    pub event_location: String,
-    pub event_host: String,
-    pub event_date: String,
+    pub title: String,
+    pub description: String,
+    pub host: String,
+    pub tags: String,
+    pub uri: String,
 }
-
 
 pub fn create_event(
     program_id: &Pubkey,
@@ -38,56 +33,18 @@ pub fn create_event(
     
     let event = next_account_info(accounts_iter)?;
     let event_metadata = next_account_info(accounts_iter)?;
-    let event_counter = next_account_info(accounts_iter)?;
+    let user = next_account_info(accounts_iter)?;
     let payer = next_account_info(accounts_iter)?;
     let system_program = next_account_info(accounts_iter)?;
 
-    // First evaluate the Event Counter to get the Event ID
-
-    let (event_counter_pubkey, event_counter_bump) = Pubkey::find_program_address(
-        &[ EventCounter::SEED_PREFIX.as_bytes().as_ref() ],
-        program_id
-    );
-    assert!(event_counter_pubkey == *event_counter.key);
-
-    let event_id: u8;
-
-    if event_counter.lamports() == 0 {
-        let event_counter_inner_data = EventCounter::new(
-            *payer.key,
-            event_counter_bump,
-        );
-        let event_counter_account_span = (event_counter_inner_data.try_to_vec()?).len();
-        invoke_signed(
-            &system_instruction::create_account(
-                &payer.key,
-                &event_counter.key,
-                lamports_required(event_counter_account_span),
-                size(event_counter_account_span),
-                program_id,
-            ),
-            &[
-                payer.clone(), event_counter.clone(), system_program.clone()
-            ],
-            &[&[
-                EventCounter::SEED_PREFIX.as_bytes().as_ref(),
-                event_counter_inner_data.bump.to_le_bytes().as_ref(),
-            ]],
-        )?;
-        event_counter_inner_data.serialize(
-            &mut &mut event_counter.data.borrow_mut()[..]
-        )?;
-        event_id = event_counter_inner_data.events_count;
-    } else {
-        let mut event_counter_inner_data = EventCounter::try_from_slice(&event_counter.try_borrow_mut_data()?)?;
-        event_counter_inner_data.events_count += 1;
-        event_counter_inner_data.serialize(
-            &mut &mut event_counter.data.borrow_mut()[..]
-        )?;
-        event_id = event_counter_inner_data.events_count;
-    }
-
-    // Now create the Event and EventMetadata
+    let mut user_inner_data = User::try_from_slice(
+        &user.try_borrow_mut_data()?
+    )?;
+    user_inner_data.events_hosted += 1;
+    user_inner_data.serialize(
+        &mut &mut user.data.borrow_mut()[..]
+    )?;
+    let event_id = user_inner_data.events_hosted;
 
     let (event_pubkey, event_bump) = Pubkey::find_program_address(
         &[
@@ -108,29 +65,27 @@ pub fn create_event(
     );
     assert!(event_metadata_pubkey == *event_metadata.key);
 
-    let event_inner_data = Event::new(
+    let event_inner_data = Event {
         event_id,
-        *payer.key,
-        event_bump,
-    );
+        authority: *payer.key,
+        bump: event_bump,
+    };
 
-    let event_metadata_inner_data = EventMetadata::new(
-        args.event_title,
-        args.event_description,
-        args.event_location,
-        args.event_host,
-        args.event_date,
-        event_metadata_bump,
-    );
-
-    let event_account_span = (event_inner_data.try_to_vec()?).len();
+    let event_metadata_inner_data = EventMetadata {
+        title: args.title,
+        description: args.description,
+        host: args.host,
+        tags: args.tags,
+        uri: args.uri,
+        bump: event_metadata_bump,
+    };
 
     invoke_signed(
         &system_instruction::create_account(
             &payer.key,
             &event.key,
-            lamports_required(event_account_span),
-            size(event_account_span),
+            event_inner_data.lamports_required()?,
+            event_inner_data.size()?,
             program_id,
         ),
         &[
@@ -144,14 +99,12 @@ pub fn create_event(
         ]],
     )?;
 
-    let event_metadata_account_span = (event_metadata_inner_data.try_to_vec()?).len();
-
     invoke_signed(
         &system_instruction::create_account(
             &payer.key,
             &event_metadata.key,
-            lamports_required(event_metadata_account_span),
-            size(event_metadata_account_span),
+            event_metadata_inner_data.lamports_required()?,
+            event_metadata_inner_data.size()?,
             program_id,
         ),
         &[

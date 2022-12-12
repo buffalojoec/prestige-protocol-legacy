@@ -19,7 +19,7 @@ import {
 } from '@solana/spl-token';
 import { 
     PrestigeProtocolInstruction 
-} from './instruction';
+} from '.';
 import { 
     getPayoutPubkey 
 } from "../util/seed-util";

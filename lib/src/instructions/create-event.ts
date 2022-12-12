@@ -14,41 +14,40 @@ import {
 } from '@solana/web3.js';
 import { 
     PrestigeProtocolInstruction 
-} from './instruction';
+} from '.';
 import { 
-    getEventCounterPubkey, 
     getEventMetadataPubkey, 
-    getEventPubkey 
+    getEventPubkey,
+    getUserPubkey, 
 } from "../util/seed-util";
 import { 
-    EventCounter 
+    User 
 } from "../state";
 import { PRESTIGE_PROGRAM_ID } from "../util";
-
 
 export class CreateEvent {
 
     instruction: PrestigeProtocolInstruction;
-    event_title: string;
-    event_description: string;
-    event_location: string;
-    event_host: string;
-    event_date: string;
+    title: string;
+    description: string;
+    host: string;
+    tags: string;
+    uri: string;
 
     constructor(props: {
         instruction: PrestigeProtocolInstruction,
-        event_title: string,
-        event_description: string,
-        event_location: string,
-        event_host: string,
-        event_date: string,
+        title: string,
+        description: string,
+        host: string,
+        tags: string,
+        uri: string,
     }) {
         this.instruction = props.instruction;
-        this.event_title = props.event_title;
-        this.event_description = props.event_description;
-        this.event_location = props.event_location;
-        this.event_host = props.event_host;
-        this.event_date = props.event_date;
+        this.title = props.title;
+        this.description = props.description;
+        this.host = props.host;
+        this.tags = props.tags;
+        this.uri = props.uri;
     }
 
     toBuffer() { 
@@ -65,11 +64,11 @@ export const CreateEventSchema = new Map([
         kind: 'struct', 
         fields: [ 
             ['instruction', 'u8'],
-            ['event_title', 'string'],
-            ['event_description', 'string'],
-            ['event_location', 'string'],
-            ['event_host', 'string'],
-            ['event_date', 'string'],
+            ['title', 'string'],
+            ['description', 'string'],
+            ['host', 'string'],
+            ['tags', 'string'],
+            ['uri', 'string'],
         ],
     }]
 ]);
@@ -77,18 +76,18 @@ export const CreateEventSchema = new Map([
 export async function createCreateEventInstruction(
     connection: Connection,
     payer: PublicKey,
-    event_title: string,
-    event_description: string,
-    event_location: string,
-    event_host: string,
-    event_date: string,
+    title: string,
+    description: string,
+    host: string,
+    tags: string,
+    uri: string,
 ): Promise<[TransactionInstruction, PublicKey, number]> {
 
     let eventId = 1;
-    const eventCounterPubkey = (await getEventCounterPubkey())[0];
-    const eventCounterData = await connection.getAccountInfo(eventCounterPubkey);
-    if (eventCounterData?.lamports != 0 && eventCounterData?.data) {
-        eventId = EventCounter.fromBuffer(eventCounterData.data).events_count + 1;
+    const userPubkey = (await getUserPubkey(payer))[0];
+    const userData = await connection.getAccountInfo(userPubkey);
+    if (userData?.lamports != 0 && userData?.data) {
+        eventId = User.fromBuffer(userData.data).events_hosted + 1;
     }
 
     const eventPubkey = (await getEventPubkey(
@@ -102,18 +101,18 @@ export async function createCreateEventInstruction(
 
     const instructionObject = new CreateEvent({
         instruction: PrestigeProtocolInstruction.CreateEvent,
-        event_title,
-        event_description,
-        event_location,
-        event_host,
-        event_date,
+        title,
+        description,
+        host,
+        tags,
+        uri,
     });
 
     const ix = new TransactionInstruction({
         keys: [
             {pubkey: eventPubkey, isSigner: false, isWritable: true},
             {pubkey: eventMetadataPubkey, isSigner: false, isWritable: true},
-            {pubkey: eventCounterPubkey, isSigner: false, isWritable: true},
+            {pubkey: userPubkey, isSigner: false, isWritable: true},
             {pubkey: payer, isSigner: true, isWritable: true},
             {pubkey: SystemProgram.programId, isSigner: false, isWritable: false}
         ],
@@ -128,22 +127,22 @@ export async function createCreateEventInstruction(
 export async function createEvent(
     connection: Connection,
     payer: Keypair,
-    event_title: string,
-    event_description: string,
-    event_location: string,
-    event_host: string,
-    event_date: string,
+    title: string,
+    description: string,
+    host: string,
+    tags: string,
+    uri: string,
     confirmOptions?: ConfirmOptions
 ): Promise<[PublicKey, number]> {
 
     const [ix, eventPubkey, eventId] = await createCreateEventInstruction(
         connection, 
         payer.publicKey,
-        event_title,
-        event_description,
-        event_location,
-        event_host,
-        event_date,
+        title,
+        description,
+        host,
+        tags,
+        uri,
     );
     await sendAndConfirmTransaction(
         connection,

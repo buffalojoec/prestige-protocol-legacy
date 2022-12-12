@@ -14,12 +14,11 @@ import {
 } from '@solana/web3.js';
 import { 
     PrestigeProtocolInstruction 
-} from './instruction';
+} from '.';
 import { 
     getUserPubkey 
 } from "../util/seed-util";
 import { PRESTIGE_PROGRAM_ID } from "../util";
-
 
 export class CreateUser {
 
@@ -54,7 +53,6 @@ export const CreateUserSchema = new Map([
 ]);
 
 export async function createCreateUserInstruction(
-    connection: Connection,
     payer: PublicKey,
     username: string,
 ): Promise<[TransactionInstruction, PublicKey]> {
@@ -90,7 +88,6 @@ export async function createUser(
 ): Promise<PublicKey> {
 
     const [ix, userPubkey] = await createCreateUserInstruction(
-        connection, 
         payer.publicKey,
         username,
     );

@@ -9,23 +9,21 @@ use solana_program::{
 
 use crate::state::{
     Challenge,
-    ChallengeCounter,
     ChallengeMetadata,
+    FixedPrize,
+    PrestigeDataAccount,
+    User,
 };
-use crate::util::{
-    lamports_required,
-    size,
-};
-
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct CreateChallengeArgs {
-    pub challenge_title: String,
-    pub challenge_description: String,
-    pub challenge_author: String,
-    pub challenge_tags: String,
+    pub title: String,
+    pub description: String,
+    pub author: String,
+    pub tags: String,
+    pub uri: String,
+    pub fixed_prizes: [Option<FixedPrize>; 5],
 }
-
 
 pub fn create_challenge(
     program_id: &Pubkey,
@@ -37,56 +35,18 @@ pub fn create_challenge(
 
     let challenge = next_account_info(accounts_iter)?;
     let challenge_metadata = next_account_info(accounts_iter)?;
-    let challenge_counter = next_account_info(accounts_iter)?;
+    let user = next_account_info(accounts_iter)?;
     let payer = next_account_info(accounts_iter)?;
     let system_program = next_account_info(accounts_iter)?;
 
-    // First evaluate the Challenge Counter to get the Challenge ID
-
-    let (challenge_counter_pubkey, challenge_counter_bump) = Pubkey::find_program_address(
-        &[ ChallengeCounter::SEED_PREFIX.as_bytes().as_ref() ],
-        program_id
-    );
-    assert!(challenge_counter_pubkey == *challenge_counter.key);
-
-    let challenge_id: u8;
-
-    if challenge_counter.lamports() == 0 {
-        let challenge_counter_inner_data = ChallengeCounter::new(
-            *payer.key,
-            challenge_counter_bump,
-        );
-        let challenge_counter_account_span = (challenge_counter_inner_data.try_to_vec()?).len();
-        invoke_signed(
-            &system_instruction::create_account(
-                &payer.key,
-                &challenge_counter.key,
-                lamports_required(challenge_counter_account_span),
-                size(challenge_counter_account_span),
-                program_id,
-            ),
-            &[
-                payer.clone(), challenge_counter.clone(), system_program.clone()
-            ],
-            &[&[
-                ChallengeCounter::SEED_PREFIX.as_bytes().as_ref(),
-                challenge_counter_inner_data.bump.to_le_bytes().as_ref(),
-            ]],
-        )?;
-        challenge_counter_inner_data.serialize(
-            &mut &mut challenge_counter.data.borrow_mut()[..]
-        )?;
-        challenge_id = challenge_counter_inner_data.challenges_count;
-    } else {
-        let mut challenge_counter_inner_data = ChallengeCounter::try_from_slice(&challenge_counter.try_borrow_mut_data()?)?;
-        challenge_counter_inner_data.challenges_count += 1;
-        challenge_counter_inner_data.serialize(
-            &mut &mut challenge_counter.data.borrow_mut()[..]
-        )?;
-        challenge_id = challenge_counter_inner_data.challenges_count;
-    }
-
-    // Now create the Challenge and ChallengeMetadata
+    let mut user_inner_data = User::try_from_slice(
+        &user.try_borrow_mut_data()?
+    )?;
+    user_inner_data.challenges_authored += 1;
+    user_inner_data.serialize(
+        &mut &mut user.data.borrow_mut()[..]
+    )?;
+    let challenge_id = user_inner_data.challenges_authored;
 
     let (challenge_pubkey, challenge_bump) = Pubkey::find_program_address(
         &[
@@ -107,28 +67,28 @@ pub fn create_challenge(
     );
     assert!(&challenge_metadata_pubkey == challenge_metadata.key);
 
-    let challenge_inner_data = Challenge::new(
+    let challenge_inner_data = Challenge {
         challenge_id,
-        *payer.key,
-        challenge_bump,
-    );
+        authority: *payer.key,
+        bump: challenge_bump,
+    };
 
-    let challenge_metadata_inner_data = ChallengeMetadata::new(
-        args.challenge_title,
-        args.challenge_description,
-        args.challenge_author,
-        args.challenge_tags,
-        challenge_metadata_bump,
-    );
-
-    let challenge_account_span = (challenge_inner_data.try_to_vec()?).len();
+    let challenge_metadata_inner_data = ChallengeMetadata {
+        title: args.title,
+        description: args.description,
+        author: args.author,
+        tags: args.tags,
+        uri: args.uri,
+        fixed_prizes: args.fixed_prizes,
+        bump: challenge_metadata_bump,
+    };
 
     invoke_signed(
         &system_instruction::create_account(
             &payer.key,
             &challenge.key,
-            lamports_required(challenge_account_span),
-            size(challenge_account_span),
+            challenge_inner_data.lamports_required()?,
+            challenge_inner_data.size()?,
             program_id,
         ),
         &[
@@ -142,14 +102,12 @@ pub fn create_challenge(
         ]],
     )?;
 
-    let challenge_metadata_account_span = (challenge_metadata_inner_data.try_to_vec()?).len();
-
     invoke_signed(
         &system_instruction::create_account(
             &payer.key,
             &challenge_metadata.key,
-            lamports_required(challenge_metadata_account_span),
-            size(challenge_metadata_account_span),
+            challenge_metadata_inner_data.lamports_required()?,
+            challenge_metadata_inner_data.size()?,
             program_id,
         ),
         &[

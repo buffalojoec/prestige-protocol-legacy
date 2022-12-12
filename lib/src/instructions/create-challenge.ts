@@ -14,38 +14,40 @@ import {
 } from '@solana/web3.js';
 import { 
     PrestigeProtocolInstruction 
-} from './instruction';
+} from '.';
 import { 
-    getChallengeCounterPubkey,
     getChallengeMetadataPubkey, 
-    getChallengePubkey 
+    getChallengePubkey,
+    getUserPubkey,
 } from "../util/seed-util";
 import { 
-    ChallengeCounter,
+    User,
 } from "../state";
 import { PRESTIGE_PROGRAM_ID } from "../util";
-
 
 export class CreateChallenge {
 
     instruction: PrestigeProtocolInstruction;
-    challenge_title: string;
-    challenge_description: string;
-    challenge_author: string;
-    challenge_tags: string;
+    title: string;
+    description: string;
+    author: string;
+    tags: string;
+    uri: string;
 
     constructor(props: {
         instruction: PrestigeProtocolInstruction,
-        challenge_title: string,
-        challenge_description: string,
-        challenge_author: string,
-        challenge_tags: string,
+        title: string,
+        description: string,
+        author: string,
+        tags: string,
+        uri: string,
     }) {
         this.instruction = props.instruction;
-        this.challenge_title = props.challenge_title;
-        this.challenge_description = props.challenge_description;
-        this.challenge_author = props.challenge_author;
-        this.challenge_tags = props.challenge_tags;
+        this.title = props.title;
+        this.description = props.description;
+        this.author = props.author;
+        this.tags = props.tags;
+        this.uri = props.uri;
     }
 
     toBuffer() { 
@@ -62,10 +64,11 @@ export const CreateChallengeSchema = new Map([
         kind: 'struct', 
         fields: [ 
             ['instruction', 'u8'],
-            ['challenge_title', 'string'],
-            ['challenge_description', 'string'],
-            ['challenge_author', 'string'],
-            ['challenge_tags', 'string'],
+            ['title', 'string'],
+            ['description', 'string'],
+            ['author', 'string'],
+            ['tags', 'string'],
+            ['uri', 'string'],
         ],
     }]
 ]);
@@ -73,17 +76,18 @@ export const CreateChallengeSchema = new Map([
 export async function createCreateChallengeInstruction(
     connection: Connection,
     payer: PublicKey,
-    challenge_title: string,
-    challenge_description: string,
-    challenge_author: string,
-    challenge_tags: string,
+    title: string,
+    description: string,
+    author: string,
+    tags: string,
+    uri: string,
 ): Promise<[TransactionInstruction, PublicKey, number]> {
 
     let challengeId = 1;
-    const challengeCounterPubkey = (await getChallengeCounterPubkey())[0];
-    const challengeCounterData = await connection.getAccountInfo(challengeCounterPubkey);
-    if (challengeCounterData?.lamports != 0 && challengeCounterData?.data) {
-        challengeId = ChallengeCounter.fromBuffer(challengeCounterData.data).challenges_count + 1;
+    const userPubkey = (await getUserPubkey(payer))[0];
+    const userData = await connection.getAccountInfo(userPubkey);
+    if (userData?.lamports != 0 && userData?.data) {
+        challengeId = User.fromBuffer(userData.data).challenges_authored + 1;
     }
 
     const challengePubkey = (await getChallengePubkey(
@@ -97,17 +101,18 @@ export async function createCreateChallengeInstruction(
 
     const instructionObject = new CreateChallenge({
         instruction: PrestigeProtocolInstruction.CreateChallenge,
-        challenge_title,
-        challenge_description,
-        challenge_author,
-        challenge_tags,
+        title,
+        description,
+        author,
+        tags,
+        uri,
     });
 
     const ix = new TransactionInstruction({
         keys: [
             {pubkey: challengePubkey, isSigner: false, isWritable: true},
             {pubkey: challengeMetadataPubkey, isSigner: false, isWritable: true},
-            {pubkey: challengeCounterPubkey, isSigner: false, isWritable: true},
+            {pubkey: userPubkey, isSigner: false, isWritable: true},
             {pubkey: payer, isSigner: true, isWritable: true},
             {pubkey: SystemProgram.programId, isSigner: false, isWritable: false}
         ],
@@ -122,20 +127,22 @@ export async function createCreateChallengeInstruction(
 export async function createChallenge(
     connection: Connection,
     payer: Keypair,
-    challenge_title: string,
-    challenge_description: string,
-    challenge_author: string,
-    challenge_tags: string,
+    title: string,
+    description: string,
+    author: string,
+    tags: string,
+    uri: string,
     confirmOptions?: ConfirmOptions
 ): Promise<[PublicKey, number]> {
 
     const [ix, challengePubkey, challengeId] = await createCreateChallengeInstruction(
         connection,
         payer.publicKey,
-        challenge_title,
-        challenge_description,
-        challenge_author,
-        challenge_tags,
+        title,
+        description,
+        author,
+        tags,
+        uri,
     );
     await sendAndConfirmTransaction(
         connection,
