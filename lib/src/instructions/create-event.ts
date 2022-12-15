@@ -16,14 +16,14 @@ import {
     PrestigeProtocolInstruction 
 } from '.';
 import { 
-    getEventMetadataPubkey, 
-    getEventPubkey,
-    getUserPubkey, 
-} from "../util/seed-util";
+    fetchUser,
+} from "../render";
 import { 
-    User 
-} from "../state";
-import { PRESTIGE_PROGRAM_ID } from "../util";
+    PRESTIGE_PROGRAM_ID,
+    eventMetadataPda,
+    eventPda,
+    userPda, 
+} from "../util";
 
 export class CreateEvent {
 
@@ -84,20 +84,14 @@ export async function createCreateEventInstruction(
 ): Promise<[TransactionInstruction, PublicKey, number]> {
 
     let eventId = 1;
-    const userPubkey = (await getUserPubkey(payer))[0];
-    const userData = await connection.getAccountInfo(userPubkey);
-    if (userData?.lamports != 0 && userData?.data) {
-        eventId = User.fromBuffer(userData.data).events_hosted + 1;
+    const userPublicKey = userPda(payer)[0];
+    try {
+        eventId = (await fetchUser(connection, userPublicKey)).user.events_hosted + 1;
+    } catch (e) {
+        console.error(e);
     }
 
-    const eventPubkey = (await getEventPubkey(
-        payer,
-        eventId,
-    ))[0];
-
-    const eventMetadataPubkey = (await getEventMetadataPubkey(
-        eventPubkey,
-    ))[0];
+    const eventPublicKey = eventPda(payer, eventId)[0];
 
     const instructionObject = new CreateEvent({
         instruction: PrestigeProtocolInstruction.CreateEvent,
@@ -110,9 +104,9 @@ export async function createCreateEventInstruction(
 
     const ix = new TransactionInstruction({
         keys: [
-            {pubkey: eventPubkey, isSigner: false, isWritable: true},
-            {pubkey: eventMetadataPubkey, isSigner: false, isWritable: true},
-            {pubkey: userPubkey, isSigner: false, isWritable: true},
+            {pubkey: eventPublicKey, isSigner: false, isWritable: true},
+            {pubkey: eventMetadataPda(eventPublicKey)[0], isSigner: false, isWritable: true},
+            {pubkey: userPublicKey, isSigner: false, isWritable: true},
             {pubkey: payer, isSigner: true, isWritable: true},
             {pubkey: SystemProgram.programId, isSigner: false, isWritable: false}
         ],
@@ -120,7 +114,7 @@ export async function createCreateEventInstruction(
         data: instructionObject.toBuffer(),
     });
 
-    return [ix, eventPubkey, eventId];
+    return [ix, eventPublicKey, eventId];
 }
 
 
@@ -135,7 +129,7 @@ export async function createEvent(
     confirmOptions?: ConfirmOptions
 ): Promise<[PublicKey, number]> {
 
-    const [ix, eventPubkey, eventId] = await createCreateEventInstruction(
+    const [ix, eventPublicKey, eventId] = await createCreateEventInstruction(
         connection, 
         payer.publicKey,
         title,
@@ -150,5 +144,5 @@ export async function createEvent(
         [payer],
         confirmOptions,
     );
-    return [eventPubkey, eventId];
+    return [eventPublicKey, eventId];
 }

@@ -2,6 +2,7 @@ use borsh::{ BorshDeserialize, BorshSerialize };
 use solana_program::{
     account_info::{ AccountInfo, next_account_info }, 
     entrypoint::ProgramResult, 
+    msg,
     program::invoke_signed,
     pubkey::Pubkey,
     system_instruction,
@@ -54,6 +55,7 @@ pub fn create_event(
         ],
         program_id
     );
+    msg!(" EVENT PDA : {}", event_pubkey);
     assert!(event_pubkey == *event.key);
 
     let (event_metadata_pubkey, event_metadata_bump) = Pubkey::find_program_address(

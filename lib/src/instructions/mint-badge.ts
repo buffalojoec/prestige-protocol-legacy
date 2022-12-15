@@ -1,15 +1,14 @@
+import assert from 'assert';
 import * as borsh from "borsh";
 import { 
     Buffer 
 } from "buffer";
-import BN from 'bn.js';
 import { 
     ConfirmOptions,
     Connection,
     Keypair,
     PublicKey, 
     sendAndConfirmTransaction, 
-    SystemProgram,
     Transaction,
     TransactionInstruction 
 } from '@solana/web3.js';
@@ -20,119 +19,105 @@ import {
 import { 
     PrestigeProtocolInstruction 
 } from '.';
+import {
+    BadgeMetadata
+} from '../state';
 import { 
-    getPayoutPubkey 
-} from "../util/seed-util";
-import { 
-    fetchPot 
-} from "../render";
-import { PRESTIGE_PROGRAM_ID } from "../util";
+    PRESTIGE_PROGRAM_ID,
+    badgeMetadataPda,
+    challengeMetadataPda,
+    prestigeMintAuthorityPda,
+} from "../util";
 
 
-export class IssuePayout {
+export class MintBadge {
 
     instruction: PrestigeProtocolInstruction;
-    amount: BN;
 
     constructor(props: {
         instruction: PrestigeProtocolInstruction,
-        amount: BN,
     }) {
         this.instruction = props.instruction;
-        this.amount = props.amount;
     }
 
     toBuffer() { 
-        return Buffer.from(borsh.serialize(IssuePayoutSchema, this)) 
+        return Buffer.from(borsh.serialize(MintBadgeSchema, this)) 
     }
     
     static fromBuffer(buffer: Buffer) {
-        return borsh.deserialize(IssuePayoutSchema, IssuePayout, buffer);
+        return borsh.deserialize(MintBadgeSchema, MintBadge, buffer);
     }
 }
 
-export const IssuePayoutSchema = new Map([
-    [ IssuePayout, { 
+export const MintBadgeSchema = new Map([
+    [ MintBadge, { 
         kind: 'struct', 
         fields: [ 
             ['instruction', 'u8'],
-            ['amount', 'u64'],
         ],
     }]
 ]);
 
-export async function createIssuePayoutInstruction(
+export async function createMintBadgeInstruction(
     connection: Connection,
     payer: Keypair,
-    potPubkey: PublicKey,
-    earnerPubkey: PublicKey,
-    amount: number,
-): Promise<[TransactionInstruction, PublicKey]> {
+    mintPublicKey: PublicKey,
+    earnerPublicKey: PublicKey,
+): Promise<TransactionInstruction> {
 
-    const potData = await fetchPot(connection, potPubkey);
-    const rewardId = potData.pot.payouts_count + 1;
-    
-    const mintPubkey = new PublicKey(potData.pot.mint);
-    const escrowOrMintAuthority = new PublicKey(potData.pot.escrow_or_mint_authority);
+    const badgeMetadataPublicKey = badgeMetadataPda(mintPublicKey)[0];
+    const badgeMetadataAccount = await connection.getAccountInfo(badgeMetadataPublicKey);
+    assert(badgeMetadataAccount);
+    const badgeMetadata = BadgeMetadata.fromBuffer(badgeMetadataAccount.data);
+    const challengePublicKey = badgeMetadata.challenge;
 
-    const [rewardPubkey, _] = await getPayoutPubkey(
-        potPubkey,
-        rewardId,
-    );
-
-    const instructionObject = new IssuePayout({
-        instruction: PrestigeProtocolInstruction.IssuePayout,
-        amount: new BN(amount),
+    const instructionObject = new MintBadge({
+        instruction: PrestigeProtocolInstruction.MintBadge,
     });
 
-    const tokenAccountPubkey = await getOrCreateAssociatedTokenAccount(
+    const earnerTokenAccountPublicKey = await getOrCreateAssociatedTokenAccount(
         connection,
         payer,
-        mintPubkey,
-        earnerPubkey,
+        mintPublicKey,
+        earnerPublicKey,
     );
 
     const ix = new TransactionInstruction({
         keys: [
-            {pubkey: rewardPubkey, isSigner: false, isWritable: true},
-            {pubkey: potPubkey, isSigner: false, isWritable: true},
-            {pubkey: earnerPubkey, isSigner: false, isWritable: true},
-            {pubkey: tokenAccountPubkey.address, isSigner: false, isWritable: true},
-            {pubkey: mintPubkey, isSigner: false, isWritable: true},
-            {pubkey: escrowOrMintAuthority, isSigner: false, isWritable: true},
+            {pubkey: challengePublicKey, isSigner: true, isWritable: true},
+            {pubkey: challengeMetadataPda(challengePublicKey)[0], isSigner: false, isWritable: true},
+            {pubkey: mintPublicKey, isSigner: false, isWritable: true},
+            {pubkey: prestigeMintAuthorityPda()[0], isSigner: false, isWritable: true},
+            {pubkey: earnerTokenAccountPublicKey.address, isSigner: false, isWritable: true},
             {pubkey: payer.publicKey, isSigner: true, isWritable: true},
-            {pubkey: SystemProgram.programId, isSigner: false, isWritable: false},
             {pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false},
         ],
         programId: PRESTIGE_PROGRAM_ID,
         data: instructionObject.toBuffer(),
     });
 
-    return [ix, rewardPubkey];
+    return ix;
 }
 
 
-export async function issuePayout(
+export async function mintBadge(
     connection: Connection,
     payer: Keypair,
-    potPubkey: PublicKey,
-    earnerPubkey: PublicKey,
-    amount: number,
+    mintPublicKey: PublicKey,
+    earnerPublicKey: PublicKey,
     confirmOptions?: ConfirmOptions
-): Promise<PublicKey> {
+): Promise<string> {
 
-    const [ix, rewardPubkey] = await createIssuePayoutInstruction(
+    const ix = await createMintBadgeInstruction(
         connection,
         payer,
-        potPubkey,
-        earnerPubkey,
-        amount,
+        mintPublicKey,
+        earnerPublicKey,
     );
-    await sendAndConfirmTransaction(
+    return await sendAndConfirmTransaction(
         connection,
         new Transaction().add(ix),
         [payer],
         confirmOptions,
     );
-    return rewardPubkey;
 }

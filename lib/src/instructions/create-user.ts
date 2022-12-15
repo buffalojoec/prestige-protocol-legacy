@@ -16,9 +16,9 @@ import {
     PrestigeProtocolInstruction 
 } from '.';
 import { 
-    getUserPubkey 
-} from "../util/seed-util";
-import { PRESTIGE_PROGRAM_ID } from "../util";
+    PRESTIGE_PROGRAM_ID,
+    userPda, 
+} from "../util";
 
 export class CreateUser {
 
@@ -57,9 +57,7 @@ export async function createCreateUserInstruction(
     username: string,
 ): Promise<[TransactionInstruction, PublicKey]> {
 
-    const userPubkey = (await getUserPubkey(
-        payer,
-    ))[0];
+    const userPublicKey = userPda(payer)[0];
 
     const instructionObject = new CreateUser({
         instruction: PrestigeProtocolInstruction.CreateUser,
@@ -68,7 +66,7 @@ export async function createCreateUserInstruction(
 
     const ix = new TransactionInstruction({
         keys: [
-            {pubkey: userPubkey, isSigner: false, isWritable: true},
+            {pubkey: userPublicKey, isSigner: false, isWritable: true},
             {pubkey: payer, isSigner: true, isWritable: true},
             {pubkey: SystemProgram.programId, isSigner: false, isWritable: false}
         ],
@@ -76,7 +74,7 @@ export async function createCreateUserInstruction(
         data: instructionObject.toBuffer(),
     });
 
-    return [ix, userPubkey];
+    return [ix, userPublicKey];
 }
 
 

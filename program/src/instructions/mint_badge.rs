@@ -1,4 +1,4 @@
-use borsh::{ BorshDeserialize, BorshSerialize };
+use borsh::BorshDeserialize;
 use solana_program::{
     account_info::{ AccountInfo, next_account_info }, 
     entrypoint::ProgramResult, 
@@ -11,7 +11,6 @@ use crate::state::{
     ChallengeMetadata,
     MintAuthorityPda,
     PrestigeDataAccount,
-    User,
 };
 
 #[derive(Clone)]
@@ -33,9 +32,7 @@ pub fn mint_badge<'a>(
     let challenge_metadata = next_account_info(accounts_iter)?;
     let mint = next_account_info(accounts_iter)?;
     let mint_authority = next_account_info(accounts_iter)?;
-    let earner = next_account_info(accounts_iter)?;
     let earner_token_account = next_account_info(accounts_iter)?;
-    let user = next_account_info(accounts_iter)?;
     let payer = next_account_info(accounts_iter)?;
     let token_program = next_account_info(accounts_iter)?;
     let mut try_next_account = || {
@@ -75,22 +72,6 @@ pub fn mint_badge<'a>(
     assert!(&mint_authority_pubkey == mint_authority.key);
     let mint_authority_metadata_inner_data = MintAuthorityPda::try_from_slice(
         &mint_authority.try_borrow_mut_data()?
-    )?;
-
-    let user_pubkey = Pubkey::find_program_address(
-        &[
-            User::SEED_PREFIX.as_bytes().as_ref(),
-            earner.key.as_ref(),
-        ],
-        program_id
-    ).0;
-    assert!(&user_pubkey == user.key);
-    let mut user_inner_data = User::try_from_slice(
-        &user.try_borrow_mut_data()?
-    )?;
-    user_inner_data.badges_earned += 1;
-    user_inner_data.serialize(
-        &mut &mut user.data.borrow_mut()[..]
     )?;
 
     let challenge_metadata_pubkey = Pubkey::find_program_address(

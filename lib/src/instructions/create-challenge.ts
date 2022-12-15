@@ -16,14 +16,18 @@ import {
     PrestigeProtocolInstruction 
 } from '.';
 import { 
-    getChallengeMetadataPubkey, 
-    getChallengePubkey,
-    getUserPubkey,
-} from "../util/seed-util";
+    fetchUser,
+} from "../render";
 import { 
-    User,
+    COption,
+    FixedPrizeList,
 } from "../state";
-import { PRESTIGE_PROGRAM_ID } from "../util";
+import { 
+    PRESTIGE_PROGRAM_ID,
+    challengeMetadataPda,
+    challengePda,
+    userPda,
+} from "../util";
 
 export class CreateChallenge {
 
@@ -33,6 +37,7 @@ export class CreateChallenge {
     author: string;
     tags: string;
     uri: string;
+    fixed_prizes: FixedPrizeList;
 
     constructor(props: {
         instruction: PrestigeProtocolInstruction,
@@ -41,6 +46,7 @@ export class CreateChallenge {
         author: string,
         tags: string,
         uri: string,
+        fixedPrizes?: FixedPrizeList,
     }) {
         this.instruction = props.instruction;
         this.title = props.title;
@@ -48,6 +54,16 @@ export class CreateChallenge {
         this.author = props.author;
         this.tags = props.tags;
         this.uri = props.uri;
+        this.fixed_prizes = props.fixedPrizes ?
+            props.fixedPrizes
+            :
+            [
+                COption.fromFixedPrize(undefined),
+                COption.fromFixedPrize(undefined),
+                COption.fromFixedPrize(undefined),
+                COption.fromFixedPrize(undefined),
+                COption.fromFixedPrize(undefined),
+            ];
     }
 
     toBuffer() { 
@@ -69,6 +85,7 @@ export const CreateChallengeSchema = new Map([
             ['author', 'string'],
             ['tags', 'string'],
             ['uri', 'string'],
+            ['fixed_prizes', [36 * 5]],
         ],
     }]
 ]);
@@ -84,20 +101,14 @@ export async function createCreateChallengeInstruction(
 ): Promise<[TransactionInstruction, PublicKey, number]> {
 
     let challengeId = 1;
-    const userPubkey = (await getUserPubkey(payer))[0];
-    const userData = await connection.getAccountInfo(userPubkey);
-    if (userData?.lamports != 0 && userData?.data) {
-        challengeId = User.fromBuffer(userData.data).challenges_authored + 1;
+    const userPublicKey = userPda(payer)[0];
+    try {
+        challengeId = (await fetchUser(connection, userPublicKey)).user.challenges_authored + 1;
+    } catch (e) {
+        console.error(e);
     }
 
-    const challengePubkey = (await getChallengePubkey(
-        payer,
-        challengeId,
-    ))[0];
-
-    const challengeMetadataPubkey = (await getChallengeMetadataPubkey(
-        challengePubkey,
-    ))[0];
+    const challengePublicKey = challengePda(payer, challengeId)[0];
 
     const instructionObject = new CreateChallenge({
         instruction: PrestigeProtocolInstruction.CreateChallenge,
@@ -110,9 +121,9 @@ export async function createCreateChallengeInstruction(
 
     const ix = new TransactionInstruction({
         keys: [
-            {pubkey: challengePubkey, isSigner: false, isWritable: true},
-            {pubkey: challengeMetadataPubkey, isSigner: false, isWritable: true},
-            {pubkey: userPubkey, isSigner: false, isWritable: true},
+            {pubkey: challengePublicKey, isSigner: false, isWritable: true},
+            {pubkey: challengeMetadataPda(challengePublicKey)[0], isSigner: false, isWritable: true},
+            {pubkey: userPublicKey, isSigner: false, isWritable: true},
             {pubkey: payer, isSigner: true, isWritable: true},
             {pubkey: SystemProgram.programId, isSigner: false, isWritable: false}
         ],
@@ -120,7 +131,7 @@ export async function createCreateChallengeInstruction(
         data: instructionObject.toBuffer(),
     });
 
-    return [ix, challengePubkey, challengeId];
+    return [ix, challengePublicKey, challengeId];
 }
 
 
@@ -135,7 +146,7 @@ export async function createChallenge(
     confirmOptions?: ConfirmOptions
 ): Promise<[PublicKey, number]> {
 
-    const [ix, challengePubkey, challengeId] = await createCreateChallengeInstruction(
+    const [ix, challengePublicKey, challengeId] = await createCreateChallengeInstruction(
         connection,
         payer.publicKey,
         title,
@@ -150,5 +161,5 @@ export async function createChallenge(
         [payer],
         confirmOptions,
     );
-    return [challengePubkey, challengeId];
+    return [challengePublicKey, challengeId];
 }

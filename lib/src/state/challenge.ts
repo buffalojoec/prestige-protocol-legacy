@@ -1,11 +1,56 @@
 import * as borsh from "borsh";
+import BN from 'bn.js';
 import { 
     Buffer 
 } from "buffer";
 import { 
     PublicKey 
 } from "@solana/web3.js";
+import { COption } from '.';
 
+export type FixedPrizeList = [
+    COption,
+    COption,
+    COption,
+    COption,
+    COption,
+];
+
+export class FixedPrize {
+    
+    mint: PublicKey;
+    quantity: BN;
+
+    constructor(props: {
+        mint: PublicKey,
+        quantity: BN,
+    }) {
+        this.mint = props.mint;
+        this.quantity = props.quantity;
+    }
+
+    toBuffer() { 
+        return Buffer.from(borsh.serialize(FixedPrizeSchema, this)) 
+    }
+    
+    static fromBuffer(buffer: Buffer) {
+        const fixedPrize = borsh.deserialize(FixedPrizeSchema, FixedPrize, buffer);
+        return new FixedPrize({
+            mint: new PublicKey(fixedPrize.mint),
+            quantity: fixedPrize.quantity,
+        });
+    }
+}
+
+export const FixedPrizeSchema = new Map([
+    [ FixedPrize, { 
+        kind: 'struct', 
+        fields: [ 
+            ['mint', [32]],
+            ['quantity', 'u64'],
+        ],
+    }]
+]);
 
 export class Challenge {
 
@@ -57,7 +102,7 @@ export const ChallengeSchema = new Map([
     [ Challenge, { 
         kind: 'struct', 
         fields: [ 
-            ['challenge_id', 'u8'],
+            ['challenge_id', 'u32'],
             ['authority', [32]],
             ['bump', 'u8'],
         ],
@@ -72,6 +117,7 @@ export class ChallengeMetadata {
     tags: string;
     uri: string;
     bump: number;
+    fixed_prizes: FixedPrizeList;
 
     constructor(props: {
         title: string,
@@ -80,6 +126,7 @@ export class ChallengeMetadata {
         tags: string,
         uri: string,
         bump: number,
+        fixedPrizes?: FixedPrizeList,
     }) {
         this.title = props.title;
         this.description = props.description;
@@ -87,6 +134,16 @@ export class ChallengeMetadata {
         this.tags = props.tags;
         this.uri = props.uri;
         this.bump = props.bump;
+        this.fixed_prizes = props.fixedPrizes ?
+            props.fixedPrizes
+            :
+            [
+                COption.fromFixedPrize(undefined),
+                COption.fromFixedPrize(undefined),
+                COption.fromFixedPrize(undefined),
+                COption.fromFixedPrize(undefined),
+                COption.fromFixedPrize(undefined),
+            ];
     }
 
     toBuffer() { 
@@ -116,6 +173,7 @@ export const ChallengeMetadataSchema = new Map([
             ['tags', 'string'],
             ['uri', 'string'],
             ['bump', 'u8'],
+            ['fixed_prizes', [36 * 5]],
         ],
     }]
 ]);

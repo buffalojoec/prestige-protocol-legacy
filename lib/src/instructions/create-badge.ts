@@ -21,86 +21,98 @@ import {
 } from '@metaplex-foundation/mpl-token-metadata';
 import { 
     PrestigeProtocolInstruction 
-} from './instruction';
+} from '.';
 import { 
-    getMetadataPubkey 
-} from "../util/seed-util";
-import { PRESTIGE_PROGRAM_ID } from "../util";
+    PRESTIGE_PROGRAM_ID,
+    badgeMetadataPda,
+    challengePda,
+    eventPda, 
+    mintMetadataMplPda,
+    prestigeMintAuthorityPda,
+} from "../util";
 
 
-export class CreateCustomMint {
+export class CreateBadge {
 
     instruction: PrestigeProtocolInstruction;
-    token_title: string;
-    token_symbol: string;
-    token_uri: string;
-    decimals: number;
+    title: string;
+    symbol: string;
+    uri: string;
 
     constructor(props: {
         instruction: PrestigeProtocolInstruction,
-        token_title: string,
-        token_symbol: string,
-        token_uri: string,
-        decimals: number,
+        title: string,
+        symbol: string,
+        uri: string,
     }) {
         this.instruction = props.instruction;
-        this.token_title = props.token_title;
-        this.token_symbol = props.token_symbol;
-        this.token_uri = props.token_uri;
-        this.decimals = props.decimals;
+        this.title = props.title;
+        this.symbol = props.symbol;
+        this.uri = props.uri;
     }
 
     toBuffer() { 
-        return Buffer.from(borsh.serialize(CreateCustomMintSchema, this)) 
+        return Buffer.from(borsh.serialize(CreateBadgeSchema, this)) 
     }
     
     static fromBuffer(buffer: Buffer) {
-        return borsh.deserialize(CreateCustomMintSchema, CreateCustomMint, buffer);
+        return borsh.deserialize(CreateBadgeSchema, CreateBadge, buffer);
     }
 }
 
-export const CreateCustomMintSchema = new Map([
-    [ CreateCustomMint, { 
+export const CreateBadgeSchema = new Map([
+    [ CreateBadge, { 
         kind: 'struct', 
         fields: [ 
             ['instruction', 'u8'],
-            ['token_title', 'string'],
-            ['token_symbol', 'string'],
-            ['token_uri', 'string'],
-            ['decimals', 'u8'],
+            ['title', 'string'],
+            ['symbol', 'string'],
+            ['uri', 'string'],
         ],
     }]
 ]);
 
 
 
-export async function createCreateCustomMintInstruction(
+export async function createCreateBadgeInstruction(
     payer: PublicKey,
-    mintPubkey: PublicKey,
-    mintAuthorityPubkey: PublicKey,
+    mintPublicKey: PublicKey,
+    event: number | PublicKey,
+    challenge: number | PublicKey,
     tokenTitle: string,
     tokenSymbol: string,
     tokenUri: string,
-    decimals: number,
-): Promise<[TransactionInstruction, PublicKey, PublicKey, PublicKey]> {
+): Promise<[TransactionInstruction, PublicKey]> {
 
-    const metadataPubkey = (await getMetadataPubkey(
-        mintPubkey
-    ))[0];
-
-    const instructionObject = new CreateCustomMint({
-        instruction: PrestigeProtocolInstruction.CreateCustomMint,
-        token_title: tokenTitle,
-        token_symbol: tokenSymbol,
-        token_uri: tokenUri,
-        decimals,
+    const instructionObject = new CreateBadge({
+        instruction: PrestigeProtocolInstruction.CreateBadge,
+        title: tokenTitle,
+        symbol: tokenSymbol,
+        uri: tokenUri,
     });
 
     const ix = new TransactionInstruction({
         keys: [
-            {pubkey: mintPubkey, isSigner: true, isWritable: true},
-            {pubkey: mintAuthorityPubkey, isSigner: false, isWritable: true},
-            {pubkey: metadataPubkey, isSigner: false, isWritable: true},
+            {
+                pubkey: typeof event === 'object' ? 
+                    event 
+                    : 
+                    eventPda(payer, event)[0], 
+                isSigner: true, 
+                isWritable: true
+            },
+            {
+                pubkey: typeof challenge === 'object' ? 
+                    challenge 
+                    : 
+                    challengePda(payer, challenge)[0], 
+                isSigner: true, 
+                isWritable: true
+            },
+            {pubkey: mintPublicKey, isSigner: true, isWritable: true},
+            {pubkey: mintMetadataMplPda(mintPublicKey)[0], isSigner: false, isWritable: true},
+            {pubkey: badgeMetadataPda(mintPublicKey)[0], isSigner: true, isWritable: true},
+            {pubkey: prestigeMintAuthorityPda()[0], isSigner: false, isWritable: true},
             {pubkey: payer, isSigner: true, isWritable: true},
             {pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false},
             {pubkey: SystemProgram.programId, isSigner: false, isWritable: false},
@@ -111,31 +123,31 @@ export async function createCreateCustomMintInstruction(
         data: instructionObject.toBuffer(),
     });
 
-    return [ix, mintPubkey, mintAuthorityPubkey, metadataPubkey];
+    return [ix, mintPublicKey];
 }
 
 
-export async function createCustomMint(
+export async function createBadge(
     connection: Connection,
     payer: Keypair,
-    mintAuthorityPubkey: PublicKey,
+    event: number | PublicKey,
+    challenge: number | PublicKey,
     tokenTitle: string,
     tokenSymbol: string,
     tokenUri: string,
-    decimals: number,
     confirmOptions?: ConfirmOptions
-): Promise<[PublicKey, PublicKey, PublicKey]> {
+): Promise<PublicKey> {
 
     const mint = Keypair.generate();
 
-    const [ix, mintPubkey, setMintAuthorityPubkey, metadataPubkey] = await createCreateCustomMintInstruction(
+    const [ix, mintPublicKey] = await createCreateBadgeInstruction(
         payer.publicKey,
         mint.publicKey,
-        mintAuthorityPubkey,
+        event,
+        challenge,
         tokenTitle,
         tokenSymbol,
         tokenUri,
-        decimals,
     );
     await sendAndConfirmTransaction(
         connection,
@@ -143,5 +155,5 @@ export async function createCustomMint(
         [payer, mint],
         confirmOptions,
     );
-    return [mintPubkey, setMintAuthorityPubkey, metadataPubkey];
+    return mintPublicKey;
 }

@@ -8,34 +8,19 @@ import {
     PublicKey 
 } from "@solana/web3.js"
 import { 
+    BadgeMetadata,
     Challenge, 
     ChallengeMetadata, 
     Event, 
     EventMetadata, 
-    Payout, 
-    Pot, 
-    Prize, 
-    Reward, 
     User
 } from "../state"
 
-
-// Wrappers
-
-export type UserWrapper = {
+export type BadgeWrapper = {
     address: PublicKey,
-    user: User,
-}
-
-export type EventWrapper = {
-    address: PublicKey,
-    event: Event,
-    metadata: EventMetadata,
-}
-
-export type PotWrapper = {
-    address: PublicKey,
-    pot: Pot,
+    mint: Mint,
+    mintMetadata: Metadata,
+    badgeMetadata: BadgeMetadata,
 }
 
 export type ChallengeWrapper = {
@@ -44,35 +29,16 @@ export type ChallengeWrapper = {
     metadata: ChallengeMetadata,
 }
 
-export type PrizeWrapper = {
+export type EventWrapper = {
     address: PublicKey,
-    prize: Prize,
+    event: Event,
+    metadata: EventMetadata,
 }
 
-export type MintMetadataWrapper = {
+export type UserWrapper = {
     address: PublicKey,
-    mint: Mint,
-    metadata: Metadata,
+    user: User,
 }
-
-export type PrizeMintMetadataWrapper = {
-    address: PublicKey,
-    prize: Prize,
-    mint: Mint,
-    metadata: Metadata,
-}
-
-export type PayoutWrapper = {
-    address: PublicKey,
-    payout: Payout,
-}
-
-export type RewardWrapper = {
-    address: PublicKey,
-    reward: Reward,
-}
-
-// Renders
 
 export type PrestigeEvent = {
     eventPubkey: PublicKey,
@@ -104,8 +70,6 @@ export type PrestigeReward = {
     uri: string,
     quantity: number,
 }
-
-// Renders
 
 export type SolanaResume = {
     rarestBadges: PrestigeReward[],

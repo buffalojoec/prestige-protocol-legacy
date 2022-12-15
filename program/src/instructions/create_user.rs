@@ -41,7 +41,6 @@ pub fn create_user(
     let user_inner_data = User {
         challenges_authored: 0,
         events_hosted: 0,
-        badges_earned: 0,
         username: args.username,
         authority: *payer.key,
         bump: user_bump,

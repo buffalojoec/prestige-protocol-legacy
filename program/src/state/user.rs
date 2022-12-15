@@ -7,7 +7,6 @@ use crate::state::PrestigeDataAccount;
 pub struct User {
     pub challenges_authored: u32,
     pub events_hosted: u32,
-    pub badges_earned: u32,
     pub username: String,
     pub authority: Pubkey,
     pub bump: u8,
