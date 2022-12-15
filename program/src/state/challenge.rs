@@ -1,99 +1,125 @@
 use borsh::{ BorshDeserialize, BorshSerialize };
-use solana_program::{ 
-    pubkey::Pubkey,
+use solana_program::pubkey::Pubkey;
+
+use crate::state::{ 
+    PrestigeDataAccount,
+    PrestigeRoleAccount,
 };
-
-
-/**
-* A Challenge, such as a Bounty Challenge or Workshop Challenge.
-*/
-
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct Challenge {
-
-    pub challenge_id: u8,
-    pub prizes_count: u8,
+    pub id: u16,
     pub authority: Pubkey,
-    pub bump: u8,
 }
 
+impl PrestigeDataAccount for Challenge {
 
-impl Challenge {
+    const SEED_PREFIX: &'static str = "challenge";
 
-    pub const SEED_PREFIX: &'static str = "challenge";
+    fn bump(&self, program_id: &Pubkey) -> u8 {
+        Pubkey::find_program_address(
+            &[
+                Challenge::SEED_PREFIX.as_bytes().as_ref(),
+                self.authority.as_ref(),
+                self.id.to_le_bytes().as_ref(),
+            ],
+            program_id
+        ).1
+    }
 
-    pub fn new(
-        challenge_id: u8,
-        authority: Pubkey,
-        bump: u8,
-    ) -> Self {
-
-        Challenge {
-            challenge_id,
-            prizes_count: 0,
-            authority,
-            bump,
-        }
+    fn is_valid_pda(&self, program_id: &Pubkey, address: &Pubkey) {
+        assert!(
+            &Pubkey::find_program_address(
+                &[
+                    Challenge::SEED_PREFIX.as_bytes().as_ref(),
+                    self.authority.as_ref(),
+                    self.id.to_le_bytes().as_ref(),
+                ],
+                program_id
+            ).0 == address
+        )
     }
 }
 
+impl PrestigeRoleAccount for Challenge {
+    fn is_correct_authority(&self, address: &Pubkey) {
+        assert!(&self.authority == address)
+    }
+}
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct ChallengeMetadata {
-    
-    pub challenge_title: String,
-    pub challenge_description: String,
-    pub challenge_author: String,
-    pub challenge_tags: String,
-    pub bump: u8,
+    pub authority: Pubkey,
+    pub challenge: Pubkey,
+    pub title: String,
+    pub description: String,
+    pub tags: String,
+    pub author: String,
+    pub uri: String,
 }
 
+impl PrestigeDataAccount for ChallengeMetadata {
 
-impl ChallengeMetadata {
+    const SEED_PREFIX: &'static str = "challenge_metadata";
 
-    pub const SEED_PREFIX: &'static str = "challenge_metadata";
+    fn bump(&self, program_id: &Pubkey) -> u8 {
+        Pubkey::find_program_address(
+            &[
+                ChallengeMetadata::SEED_PREFIX.as_bytes().as_ref(),
+                self.challenge.as_ref(),
+            ],
+            program_id
+        ).1
+    }
 
-    pub fn new(
-        challenge_title: String,
-        challenge_description: String,
-        challenge_author: String,
-        challenge_tags: String,
-        bump: u8,
-    ) -> Self {
-
-        ChallengeMetadata {
-            challenge_title,
-            challenge_description,
-            challenge_author,
-            challenge_tags,
-            bump,
-        }
+    fn is_valid_pda(&self, program_id: &Pubkey, address: &Pubkey) {
+        assert!(
+            &Pubkey::find_program_address(
+                &[
+                    ChallengeMetadata::SEED_PREFIX.as_bytes().as_ref(),
+                    self.challenge.as_ref(),
+                ],
+                program_id
+            ).0 == address
+        )
     }
 }
 
+impl PrestigeRoleAccount for ChallengeMetadata {
+    fn is_correct_authority(&self, address: &Pubkey) {
+        assert!(&self.authority == address)
+    }
+}
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct ChallengeCounter {
-
-    pub challenges_count: u8,
-    pub bump: u8,
+    pub authority: Pubkey,
+    pub count: u16,
 }
 
+impl PrestigeDataAccount for ChallengeCounter {
 
-impl ChallengeCounter {
+    const SEED_PREFIX: &'static str = "challenge_counter";
 
-    pub const SEED_PREFIX: &'static str = "challenge_counter";
-    
-    pub fn new(
-        authority: Pubkey,
-        bump: u8,
-    ) -> Self {
+    fn bump(&self, program_id: &Pubkey) -> u8 {
+        Pubkey::find_program_address(
+            &[
+                ChallengeCounter::SEED_PREFIX.as_bytes().as_ref(),
+                self.authority.as_ref(),
+            ],
+            program_id
+        ).1
+    }
 
-        ChallengeCounter {
-            challenges_count: 1,
-            authority,
-            bump,
-        }
+    fn is_valid_pda(&self, program_id: &Pubkey, address: &Pubkey) {
+        assert!(
+            &Pubkey::find_program_address(
+                &[
+                    ChallengeCounter::SEED_PREFIX.as_bytes().as_ref(),
+                    self.authority.as_ref(),
+                ],
+                program_id
+            ).0 == address
+        )
     }
 }

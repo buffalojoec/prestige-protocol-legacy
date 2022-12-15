@@ -1,41 +1,32 @@
+import { PublicKey } from "@solana/web3.js";
 import { 
-    Metadata 
-} from "@metaplex-foundation/mpl-token-metadata"
-import { 
-    Mint 
-} from "@solana/spl-token"
-import { 
-    PublicKey 
-} from "@solana/web3.js"
-import { 
+    Award, 
+    AwardCounter, 
     Challenge, 
+    ChallengeCounter, 
     ChallengeMetadata, 
     Event, 
-    EventMetadata, 
-    Payout, 
-    Pot, 
-    Prize, 
-    Reward, 
-    User
-} from "../state"
+    EventCounter, 
+    EventMetadata 
+} from "../state";
 
-
-// Wrappers
-
-export type UserWrapper = {
+export type AwardWrapper = {
     address: PublicKey,
-    user: User,
+    award: Award,
 }
 
-export type EventWrapper = {
+export type AwardCounterWrapper = {
     address: PublicKey,
+    counter: AwardCounter,
+}
+
+export type AwardFullDataWrapper = {
+    address: PublicKey,
+    award: Award,
+    challenge: Challenge,
+    challengeMetadata: ChallengeMetadata,
     event: Event,
-    metadata: EventMetadata,
-}
-
-export type PotWrapper = {
-    address: PublicKey,
-    pot: Pot,
+    eventMetadata: EventMetadata,
 }
 
 export type ChallengeWrapper = {
@@ -44,76 +35,18 @@ export type ChallengeWrapper = {
     metadata: ChallengeMetadata,
 }
 
-export type PrizeWrapper = {
+export type ChallengeCounterWrapper = {
     address: PublicKey,
-    prize: Prize,
+    counter: ChallengeCounter,
 }
 
-export type MintMetadataWrapper = {
+export type EventWrapper = {
     address: PublicKey,
-    mint: Mint,
-    metadata: Metadata,
+    event: Event,
+    metadata: EventMetadata,
 }
 
-export type PrizeMintMetadataWrapper = {
+export type EventCounterWrapper = {
     address: PublicKey,
-    prize: Prize,
-    mint: Mint,
-    metadata: Metadata,
-}
-
-export type PayoutWrapper = {
-    address: PublicKey,
-    payout: Payout,
-}
-
-export type RewardWrapper = {
-    address: PublicKey,
-    reward: Reward,
-}
-
-// Renders
-
-export type PrestigeEvent = {
-    eventPubkey: PublicKey,
-    eventTitle: string,
-    eventDescription: string,
-    eventLocation: string,
-    eventHost: string,
-    eventDate: string,
-    challengesCompleted: PrestigeChallenge[],
-}
-
-export type PrestigeChallenge = {
-    eventPubkey: PublicKey,
-    challengePubkey: PublicKey,
-    challengeTitle: string,
-    challengeDescription: string,
-    challengeAuthor: string,
-    challengeAuthorPubkey: PublicKey,
-    rewards: PrestigeReward[],
-}
-
-export type PrestigeReward = {
-    challengePubkey: PublicKey,
-    rewardPubkey: PublicKey,
-    prizePubkey: PublicKey,
-    mintPubkey: PublicKey,
-    title: string,
-    symbol: string,
-    uri: string,
-    quantity: number,
-}
-
-// Renders
-
-export type SolanaResume = {
-    rarestBadges: PrestigeReward[],
-    topXptokens: PrestigeReward[],
-    achievements: PrestigeEvent[],
-}
-
-export type ManagerPanel = {
-    mostPopularEvents: PrestigeEvent[],
-    managedEvents: PrestigeEvent[];
+    counter: EventCounter,
 }

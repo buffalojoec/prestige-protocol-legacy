@@ -1,3 +1,3 @@
-# :shield: Prestige Protocol
+# :badge: Prestige Protocol
 
-![](doc/prestige_protocol_data.jpg)
+![](./docs/prestige_protocol.jpg)

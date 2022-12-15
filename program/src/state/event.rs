@@ -1,98 +1,126 @@
 use borsh::{ BorshDeserialize, BorshSerialize };
 use solana_program::pubkey::Pubkey;
 
-
-/**
-* An Event, such as a Bounty Battle or Workshop.
-*/
-
+use crate::state::{ 
+    PrestigeDataAccount,
+    PrestigeRoleAccount,
+};
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct Event {
-
-    pub event_id: u8,
-    pub pots_count: u8,
+    pub id: u16,
     pub authority: Pubkey,
-    pub bump: u8,
 }
 
+impl PrestigeDataAccount for Event {
 
-impl Event {
+    const SEED_PREFIX: &'static str = "event";
 
-    pub const SEED_PREFIX: &'static str = "event";
-    
-    pub fn new(
-        event_id: u8,
-        authority: Pubkey,
-        bump: u8,
-    ) -> Self {
+    fn bump(&self, program_id: &Pubkey) -> u8 {
+        Pubkey::find_program_address(
+            &[
+                Event::SEED_PREFIX.as_bytes().as_ref(),
+                self.authority.as_ref(),
+                self.id.to_le_bytes().as_ref(),
+            ],
+            program_id
+        ).1
+    }
 
-        Event {
-            event_id,
-            pots_count: 0,
-            authority,
-            bump,
-        }
+    fn is_valid_pda(&self, program_id: &Pubkey, address: &Pubkey) {
+        assert!(
+            &Pubkey::find_program_address(
+                &[
+                    Event::SEED_PREFIX.as_bytes().as_ref(),
+                    self.authority.as_ref(),
+                    self.id.to_le_bytes().as_ref(),
+                ],
+                program_id
+            ).0 == address
+        )
     }
 }
 
+impl PrestigeRoleAccount for Event {
+    fn is_correct_authority(&self, address: &Pubkey) {
+        assert!(&self.authority == address)
+    }
+}
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct EventMetadata {
-    
-    pub event_title: String,
-    pub event_description: String,
-    pub event_location: String,
-    pub event_host: String,
-    pub event_date: String,
-    pub bump: u8,
+    pub authority: Pubkey,
+    pub event: Pubkey,
+    pub title: String,
+    pub description: String,
+    pub location: String,
+    pub date: String,
+    pub host: String,
+    pub uri: String,
 }
 
+impl PrestigeDataAccount for EventMetadata {
 
-impl EventMetadata {
+    const SEED_PREFIX: &'static str = "event_metadata";
 
-    pub const SEED_PREFIX: &'static str = "event_metadata";
-    
-    pub fn new(
-        event_title: String,
-        event_description: String,
-        event_location: String,
-        event_host: String,
-        event_date: String,
-        bump: u8,
-    ) -> Self {
+    fn bump(&self, program_id: &Pubkey) -> u8 {
+        Pubkey::find_program_address(
+            &[
+                EventMetadata::SEED_PREFIX.as_bytes().as_ref(),
+                self.event.as_ref(),
+            ],
+            program_id
+        ).1
+    }
 
-        EventMetadata {
-            event_title,
-            event_description,
-            event_location,
-            event_host,
-            event_date,
-            bump,
-        }
+    fn is_valid_pda(&self, program_id: &Pubkey, address: &Pubkey) {
+        assert!(
+            &Pubkey::find_program_address(
+                &[
+                    EventMetadata::SEED_PREFIX.as_bytes().as_ref(),
+                    self.event.as_ref(),
+                ],
+                program_id
+            ).0 == address
+        )
     }
 }
 
+impl PrestigeRoleAccount for EventMetadata {
+    fn is_correct_authority(&self, address: &Pubkey) {
+        assert!(&self.authority == address)
+    }
+}
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct EventCounter {
-
-    pub events_count: u8,
-    pub bump: u8,
+    pub authority: Pubkey,
+    pub count: u16,
 }
 
+impl PrestigeDataAccount for EventCounter {
 
-impl EventCounter {
+    const SEED_PREFIX: &'static str = "event_counter";
 
-    pub const SEED_PREFIX: &'static str = "event_counter";
-    
-    pub fn new(
-        bump: u8,
-    ) -> Self {
+    fn bump(&self, program_id: &Pubkey) -> u8 {
+        Pubkey::find_program_address(
+            &[
+                EventCounter::SEED_PREFIX.as_bytes().as_ref(),
+                self.authority.as_ref(),
+            ],
+            program_id
+        ).1
+    }
 
-        EventCounter {
-            events_count: 1,
-            bump,
-        }
+    fn is_valid_pda(&self, program_id: &Pubkey, address: &Pubkey) {
+        assert!(
+            &Pubkey::find_program_address(
+                &[
+                    EventCounter::SEED_PREFIX.as_bytes().as_ref(),
+                    self.authority.as_ref(),
+                ],
+                program_id
+            ).0 == address
+        )
     }
 }

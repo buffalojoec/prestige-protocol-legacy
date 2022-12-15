@@ -14,41 +14,42 @@ import {
 } from '@solana/web3.js';
 import { 
     PrestigeProtocolInstruction 
-} from './instruction';
+} from '.';
+import { fetchEventCounter } from "../render";
 import { 
-    getEventCounterPubkey, 
-    getEventMetadataPubkey, 
-    getEventPubkey 
-} from "../util/seed-util";
-import { 
-    EventCounter 
-} from "../state";
-import { PRESTIGE_PROGRAM_ID } from "../util";
+    eventCounterPda, 
+    eventMetadataPda, 
+    eventPda, 
+    PRESTIGE_PROGRAM_ID 
+} from "../util";
 
 
 export class CreateEvent {
 
     instruction: PrestigeProtocolInstruction;
-    event_title: string;
-    event_description: string;
-    event_location: string;
-    event_host: string;
-    event_date: string;
+    title: string;
+    description: string;
+    location: string;
+    date: string;
+    host: string;
+    uri: string;
 
     constructor(props: {
         instruction: PrestigeProtocolInstruction,
-        event_title: string,
-        event_description: string,
-        event_location: string,
-        event_host: string,
-        event_date: string,
+        title: string,
+        description: string,
+        location: string,
+        date: string,
+        host: string,
+        uri: string,
     }) {
         this.instruction = props.instruction;
-        this.event_title = props.event_title;
-        this.event_description = props.event_description;
-        this.event_location = props.event_location;
-        this.event_host = props.event_host;
-        this.event_date = props.event_date;
+        this.title = props.title;
+        this.description = props.description;
+        this.location = props.location;
+        this.date = props.date;
+        this.host = props.host;
+        this.uri = props.uri;
     }
 
     toBuffer() { 
@@ -65,11 +66,12 @@ export const CreateEventSchema = new Map([
         kind: 'struct', 
         fields: [ 
             ['instruction', 'u8'],
-            ['event_title', 'string'],
-            ['event_description', 'string'],
-            ['event_location', 'string'],
-            ['event_host', 'string'],
-            ['event_date', 'string'],
+            ['title', 'string'],
+            ['description', 'string'],
+            ['location', 'string'],
+            ['date', 'string'],
+            ['host', 'string'],
+            ['uri', 'string'],
         ],
     }]
 ]);
@@ -77,43 +79,44 @@ export const CreateEventSchema = new Map([
 export async function createCreateEventInstruction(
     connection: Connection,
     payer: PublicKey,
-    event_title: string,
-    event_description: string,
-    event_location: string,
-    event_host: string,
-    event_date: string,
+    title: string,
+    description: string,
+    location: string,
+    date: string,
+    host: string,
+    uri: string,
 ): Promise<[TransactionInstruction, PublicKey, number]> {
 
+    const eventCounterPublicKey = eventCounterPda(payer)[0];
+
     let eventId = 1;
-    const eventCounterPubkey = (await getEventCounterPubkey())[0];
-    const eventCounterData = await connection.getAccountInfo(eventCounterPubkey);
-    if (eventCounterData?.lamports != 0 && eventCounterData?.data) {
-        eventId = EventCounter.fromBuffer(eventCounterData.data).events_count + 1;
+    try {
+        eventId = (await fetchEventCounter(
+            connection, 
+            eventCounterPublicKey,
+        )).counter.count + 1;
+    } catch (e) {
+        console.log(e);
     }
 
-    const eventPubkey = (await getEventPubkey(
-        payer,
-        eventId,
-    ))[0];
-
-    const eventMetadataPubkey = (await getEventMetadataPubkey(
-        eventPubkey,
-    ))[0];
+    const eventPublicKey = eventPda(payer, eventId)[0];
+    const eventMetadataPublicKey = eventMetadataPda(eventPublicKey)[0];
 
     const instructionObject = new CreateEvent({
         instruction: PrestigeProtocolInstruction.CreateEvent,
-        event_title,
-        event_description,
-        event_location,
-        event_host,
-        event_date,
+        title,
+        description,
+        location,
+        date,
+        host,
+        uri,
     });
 
     const ix = new TransactionInstruction({
         keys: [
-            {pubkey: eventPubkey, isSigner: false, isWritable: true},
-            {pubkey: eventMetadataPubkey, isSigner: false, isWritable: true},
-            {pubkey: eventCounterPubkey, isSigner: false, isWritable: true},
+            {pubkey: eventPublicKey, isSigner: false, isWritable: true},
+            {pubkey: eventCounterPublicKey, isSigner: false, isWritable: true},
+            {pubkey: eventMetadataPublicKey, isSigner: false, isWritable: true},
             {pubkey: payer, isSigner: true, isWritable: true},
             {pubkey: SystemProgram.programId, isSigner: false, isWritable: false}
         ],
@@ -121,29 +124,31 @@ export async function createCreateEventInstruction(
         data: instructionObject.toBuffer(),
     });
 
-    return [ix, eventPubkey, eventId];
+    return [ix, eventPublicKey, eventId];
 }
 
 
 export async function createEvent(
     connection: Connection,
     payer: Keypair,
-    event_title: string,
-    event_description: string,
-    event_location: string,
-    event_host: string,
-    event_date: string,
+    title: string,
+    description: string,
+    location: string,
+    date: string,
+    host: string,
+    uri: string,
     confirmOptions?: ConfirmOptions
 ): Promise<[PublicKey, number]> {
 
-    const [ix, eventPubkey, eventId] = await createCreateEventInstruction(
-        connection, 
+    const [ix, eventPublicKey, eventId] = await createCreateEventInstruction(
+        connection,
         payer.publicKey,
-        event_title,
-        event_description,
-        event_location,
-        event_host,
-        event_date,
+        title,
+        description,
+        location,
+        date,
+        host,
+        uri,
     );
     await sendAndConfirmTransaction(
         connection,
@@ -151,5 +156,5 @@ export async function createEvent(
         [payer],
         confirmOptions,
     );
-    return [eventPubkey, eventId];
+    return [eventPublicKey, eventId];
 }

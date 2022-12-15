@@ -9,4 +9,4 @@ then
 fi
 
 cargo build-bpf
-solana program deploy ./target/deploy/prestige_program.so
+solana program deploy ./target/deploy/prestige_program.so --keypair ~/.config/solana/prestige/main/main.json

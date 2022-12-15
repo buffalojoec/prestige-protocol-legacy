@@ -1,13 +1,9 @@
+export * from './create-award';
 export * from './create-challenge';
-export * from './create-custom-mint';
 export * from './create-event';
-export * from './create-pot';
-export * from './create-prize';
-export * from './create-user';
-export * from './instruction';
-export * from './issue-payout';
-export * from './issue-reward';
-export * from './update-challenge';
-export * from './update-event';
-export * from './update-pot';
-export * from './update-prize';
+
+export enum PrestigeProtocolInstruction {
+    CreateAward,
+    CreateChallenge,
+    CreateEvent,
+}

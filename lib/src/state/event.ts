@@ -1,29 +1,18 @@
 import * as borsh from "borsh";
-import { 
-    Buffer 
-} from "buffer";
-import { 
-    PublicKey 
-} from "@solana/web3.js";
-
+import { Buffer } from "buffer";
+import { PublicKey } from "@solana/web3.js";
 
 export class Event {
 
-    event_id: number;
-    pots_count: number;
+    id: number;
     authority: PublicKey;
-    bump: number;
 
     constructor(props: {
-        event_id: number,
-        pots_count: number,
+        id: number,
         authority: PublicKey,
-        bump: number,
     }) {
-        this.event_id = props.event_id;
-        this.pots_count = props.pots_count;
+        this.id = props.id;
         this.authority = props.authority;
-        this.bump = props.bump;
     }
 
     toBuffer() { 
@@ -31,29 +20,11 @@ export class Event {
     }
     
     static fromBuffer(buffer: Buffer) {
-        const event = borsh.deserialize(EventSchema, Event, buffer);
+        const data = borsh.deserialize(EventSchema, Event, buffer);
         return new Event({
-            event_id: event.event_id,
-            pots_count: event.pots_count,
-            authority: new PublicKey(event.authority),
-            bump: event.bump,
+            id: data.id,
+            authority: new PublicKey(data.authority),
         });
-    }
-
-    static getProgramAccountsFilter(authority: PublicKey) {
-        return {
-            filters: [
-                {
-                    dataSize: 35,
-                },
-                {
-                    memcmp: {
-                        offset: 2,
-                        bytes: authority.toBase58(),
-                    }
-                }
-            ]
-        };
     }
 }
 
@@ -61,39 +32,41 @@ export const EventSchema = new Map([
     [ Event, { 
         kind: 'struct', 
         fields: [ 
-            ['event_id', 'u8'],
-            ['pots_count', 'u8'],
+            ['id', 'u16'],
             ['authority', [32]],
-            ['bump', 'u8'],
         ],
     }]
 ]);
 
-
-
 export class EventMetadata {
 
-    event_title: string;
-    event_description: string;
-    event_location: string;
-    event_host: string;
-    event_date: string;
-    bump: number;
+    authority: PublicKey;
+    event: PublicKey;
+    title: string;
+    description: string;
+    location: string;
+    host: string;
+    date: string;
+    uri: string;
 
     constructor(props: {
-        event_title: string,
-        event_description: string,
-        event_location: string,
-        event_host: string,
-        event_date: string,
-        bump: number,
+        authority: PublicKey,
+        event: PublicKey,
+        title: string,
+        description: string,
+        location: string,
+        host: string,
+        date: string,
+        uri: string,
     }) {
-        this.event_title = props.event_title;
-        this.event_description = props.event_description;
-        this.event_location = props.event_location;
-        this.event_host = props.event_host;
-        this.event_date = props.event_date;
-        this.bump = props.bump;
+        this.authority = props.authority;
+        this.event = props.event;
+        this.title = props.title;
+        this.description = props.description;
+        this.location = props.location;
+        this.host = props.host;
+        this.date = props.date;
+        this.uri = props.uri;
     }
 
     toBuffer() { 
@@ -101,15 +74,17 @@ export class EventMetadata {
     }
     
     static fromBuffer(buffer: Buffer) {
-        const eventMetadata = borsh.deserialize(EventMetadataSchema, EventMetadata, buffer);
+        const data = borsh.deserialize(EventMetadataSchema, EventMetadata, buffer);
         return new EventMetadata({
-            event_title: eventMetadata.event_title,
-            event_description: eventMetadata.event_description,
-            event_location: eventMetadata.event_location,
-            event_host: eventMetadata.event_host,
-            event_date: eventMetadata.event_date,
-            bump: eventMetadata.bump,
-        })
+            authority: new PublicKey(data.authority),
+            event: new PublicKey(data.event),
+            title: data.title,
+            description: data.description,
+            location: data.location,
+            host: data.host,
+            date: data.date,
+            uri: data.uri,
+        });
     }
 }
 
@@ -117,31 +92,29 @@ export const EventMetadataSchema = new Map([
     [ EventMetadata, { 
         kind: 'struct', 
         fields: [ 
-            ['event_title', 'string'],
-            ['event_description', 'string'],
-            ['event_location', 'string'],
-            ['event_host', 'string'],
-            ['event_date', 'string'],
-            ['bump', 'u8'],
+            ['authority', [32]],
+            ['event', [32]],
+            ['title', 'string'],
+            ['description', 'string'],
+            ['location', 'string'],
+            ['host', 'string'],
+            ['date', 'string'],
+            ['uri', 'string'],
         ],
     }]
 ]);
 
-
 export class EventCounter {
 
-    events_count: number;
     authority: PublicKey;
-    bump: number;
+    count: number;
 
     constructor(props: {
-        events_count: number,
         authority: PublicKey,
-        bump: number,
+        count: number,
     }) {
-        this.events_count = props.events_count;
         this.authority = props.authority;
-        this.bump = props.bump;
+        this.count = props.count;
     }
 
     toBuffer() { 
@@ -149,11 +122,10 @@ export class EventCounter {
     }
     
     static fromBuffer(buffer: Buffer) {
-        const eventCounter = borsh.deserialize(EventCounterSchema, EventCounter, buffer);
+        const data = borsh.deserialize(EventCounterSchema, EventCounter, buffer);
         return new EventCounter({
-            events_count: eventCounter.events_count,
-            authority: eventCounter.authority,
-            bump: eventCounter.bump,
+            count: data.count,
+            authority: new PublicKey(data.authority),
         })
     }
 }
@@ -162,9 +134,8 @@ export const EventCounterSchema = new Map([
     [ EventCounter, { 
         kind: 'struct', 
         fields: [ 
-            ['events_count', 'u8'],
             ['authority', [32]],
-            ['bump', 'u8'],
+            ['count', 'u16'],
         ],
     }]
 ]);
