@@ -94,7 +94,7 @@ export async function createCreateEventInstruction(
         eventId = (await fetchEventCounter(
             connection, 
             eventCounterPublicKey,
-        )).counter.count + 1;
+        )).count + 1;
     } catch (e) {
         console.log(e);
     }

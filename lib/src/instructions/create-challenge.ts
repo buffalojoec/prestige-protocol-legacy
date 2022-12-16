@@ -89,7 +89,7 @@ export async function createCreateChallengeInstruction(
         challengeId = (await fetchChallengeCounter(
             connection, 
             challengeCounterPublicKey,
-        )).counter.count + 1;
+        )).count + 1;
     } catch (e) {
         console.log(e);
     }

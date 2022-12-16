@@ -6,6 +6,7 @@ import {
     createAward,
     createChallenge,
     createEvent,
+    fetchAllFullAwardDatas,
     fetchChallenge,
     fetchEvent,
     fetchFullAwardData,
@@ -182,8 +183,12 @@ describe("Prestige Protocol: Unit Tests", async () => {
         );
         console.log(`Authority Public Key   :  ${authority.publicKey.toBase58()}`);
         console.log(`Award Public Key       :  ${awardPublicKey}`);
-        console.log(`Event Title            :  ${fullAwardData.eventMetadata.title}`);
-        console.log(`Challenge Title        :  ${fullAwardData.challengeMetadata.title}`);
+        console.log(`Event Title            :  ${
+            fullAwardData.eventMetadata ? fullAwardData.eventMetadata.title : "No event metadata found"
+        }`);
+        console.log(`Challenge Title        :  ${
+            fullAwardData.challengeMetadata ? fullAwardData.challengeMetadata.title : "No challenge metadata found"
+        }`);
         return awardPublicKey
     }
 
@@ -222,6 +227,23 @@ describe("Prestige Protocol: Unit Tests", async () => {
             challengePublicKeyBB,
             testEarner.publicKey,
         ),
+    );
+
+    async function printAllAwards() {
+        (await fetchAllFullAwardDatas(connection, testEarner.publicKey))
+            .forEach((fullAwardData) => {
+                console.log(`Event Title            :  ${
+                    fullAwardData.eventMetadata ? fullAwardData.eventMetadata.title : "No event metadata found"
+                }`);
+                console.log(`Challenge Title        :  ${
+                    fullAwardData.challengeMetadata ? fullAwardData.challengeMetadata.title : "No challenge metadata found"
+                }`);
+            })
+    }
+
+    it(
+        "Print all awards earned by the Test Earner", 
+        async () => await printAllAwards(),
     );
 });
   

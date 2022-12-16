@@ -58,7 +58,7 @@ export async function createCreateAwardInstruction(
         awardId = (await fetchAwardCounter(
             connection, 
             awardCounterPublicKey,
-        )).counter.count + 1;
+        )).count + 1;
     } catch (e) {
         console.log(e);
     }

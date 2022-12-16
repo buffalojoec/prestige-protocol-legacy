@@ -2,7 +2,7 @@ import { PublicKey } from '@solana/web3.js';
 import { toBufferLE } from 'bigint-buffer';
 
 export const PRESTIGE_PROGRAM_ID: PublicKey = new PublicKey(
-    "4GLrTajA57yzDNx6Hoq5rXUzFBTDRoPTvk8SWHeyAhd7"
+    "A8XLGi6dVtGWWRiFybHS1hqyqcBvSggkyamgk5cwMwf9"
 );
 
 export const AWARD_SEED_PREFIX = "award";
